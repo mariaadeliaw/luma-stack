@@ -142,6 +142,7 @@ def render_manual_input_form():
         if st.button(button_text, type="primary", width = 'stretch'):
             success, message = manager.add_class(class_id, class_name, color_code)
             if success:
+                st.session_state['ReferenceDataSource'] = False
                 sync_session_from_manager()  # Sync back to session state
                 st.success(f"✅ {message}")
                 st.rerun()
@@ -214,6 +215,7 @@ with tab2:
                 color_col = None if color_col_selection == "< No Color Column >" else color_col_selection
                 success, message = manager.process_csv_upload(df, id_col, name_col, color_col)
                 if success:
+                    st.session_state['ReferenceDataSource'] = False
                     # If colors were detected, finalize immediately
                     if color_col:
                         success_final, message_final = manager.finalize_csv_upload()
@@ -282,6 +284,9 @@ with tab3:
     st.markdown("#### Load Default Classification Scheme")
     st.info("Quick start with predefined RESTORE+ project land cover classes")
     
+    if 'ReferenceDataSource' not in st.session_state:
+        st.session_state.ReferenceDataSource = False
+
     default_schemes = manager.get_default_schemes()
     
     selected_scheme = st.selectbox(
@@ -293,7 +298,7 @@ with tab3:
     if selected_scheme:
         with st.expander("📋 Preview Classes"):
             preview_df = pd.DataFrame(default_schemes[selected_scheme])
-            st.dataframe(preview_df, width = 'stretch')
+            st.dataframe(preview_df, use_container_width=True)
     
     if st.button("📋 Load Default Scheme", type="primary", width = 'stretch'):
         sync_manager_from_session()  # Sync current state
@@ -301,6 +306,7 @@ with tab3:
         if success:
             sync_session_from_manager()  # Sync back to session state
             st.success(f"✅ {message}")
+            st.session_state['ReferenceDataSource'] = True
             st.rerun()
         else:
             st.error(f"❌ {message}")
@@ -377,7 +383,7 @@ def render_class_display():
     
     with col2:
         with st.expander("📋 Preview Data"):
-            st.dataframe(manager.get_dataframe(), width = 'stretch')
+            st.dataframe(manager.get_dataframe(), use_container_width=True)
 
 # Render the class display
 render_class_display()
