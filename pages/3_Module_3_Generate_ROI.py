@@ -14,7 +14,9 @@ from shapely.geometry import shape, Point, Polygon, mapping
 from epistemx.module_3 import InputCheck, SyncTrainData, SplitTrainData, LULCSamplingTool
 from epistemx.ee_config import initialize_earth_engine
 
-initialize_earth_engine()
+# Initialize Earth Engine with service account
+service_account_path = "auth/fazamahezs-c6a5e802b04c.json"
+initialize_earth_engine(service_account_file=service_account_path)
 
 # Initialize session state variables
 session_defaults = {
@@ -572,7 +574,7 @@ else:
                             folium.LayerControl().add_to(m)
                             
                             # Display map
-                            st_folium(m, width=None, height=400)
+                            st_folium(m, width=None, height=400, key="preview_map")
                             
                             if st.button("Proses Data Pelatihan", type="primary", key="process_uploaded_data"):
                                 # Store the data first
@@ -824,6 +826,11 @@ else:
         
         st.info("Gunakan peta di bawah untuk mengumpulkan sampel pelatihan dengan menambahkan koordinat secara manual.")
         
+        # Live feature counter
+        total_features = len(st.session_state.sampling_data['features'])
+        if total_features > 0:
+            st.info(f"📍 **{total_features} fitur** telah dikumpulkan")
+        
         if 'classes_df' not in st.session_state:
             st.session_state.classes_df = dict(zip(LULCTable['LULC_Type'], LULCTable['color_palette']))
         classes_df = st.session_state.classes_df
@@ -907,7 +914,7 @@ else:
 
         col_map, col_colors = st.columns([3, 1])
         with col_map:
-            map_output = st_folium(m, width=None, height=600, key="folium_map", returned_objects=["last_active_drawing", "center", "zoom"])
+            map_output = st_folium(m, width=None, height=600, key="folium_map", returned_objects=["last_active_drawing"])
         
         with col_colors:
             st.markdown("**Visibilitas Layer:**")
@@ -930,12 +937,14 @@ else:
 
 
 
-        if map_output:
-            if map_output.get("center"):
-                st.session_state.center_lat, st.session_state.center_lon = map_output["center"]["lat"], map_output["center"]["lng"]
-            if map_output.get("zoom"):
-                st.session_state.map_zoom = map_output["zoom"]
+        # Show success message for last added feature
+        if 'last_added_feature' in st.session_state:
+            last_feature = st.session_state['last_added_feature']
+            st.success(f"✓ Feature #{last_feature['id']} added: **{last_feature['class']}** ({last_feature['type']})")
+            # Clear the message after showing it
+            del st.session_state['last_added_feature']
 
+        # Handle new feature drawing
         if map_output and map_output.get("last_active_drawing"):
             new_feature = map_output["last_active_drawing"]
             if new_feature['geometry'] != st.session_state.last_recorded_feature:
@@ -961,13 +970,24 @@ else:
                 
                 st.session_state.sampling_data['features'].append(new_feature)
                 st.session_state.last_recorded_feature = new_feature['geometry']
-                st.success(f"✓ Captured Feature #{st.session_state.feature_count}: **{selected_class}** ({new_feature['geometry']['type']})")
-                st.rerun()
+                # Store success message for next render
+                st.session_state['last_added_feature'] = {
+                    'id': st.session_state.feature_count,
+                    'class': selected_class,
+                    'type': new_feature['geometry']['type']
+                }
 
         st.subheader("Fitur LULC yang Terekam")
         if st.session_state.sampling_data['features']:
             try:
-                gdf = gpd.GeoDataFrame.from_features(st.session_state.sampling_data['features'])
+                # Use caching to avoid recreating GeoDataFrame on every interaction
+                features_hash = str(len(st.session_state.sampling_data['features']))
+                if ('cached_gdf' not in st.session_state or 
+                    st.session_state.get('cached_features_hash') != features_hash):
+                    st.session_state['cached_gdf'] = gpd.GeoDataFrame.from_features(st.session_state.sampling_data['features'])
+                    st.session_state['cached_features_hash'] = features_hash
+                
+                gdf = st.session_state['cached_gdf']
                 summary_data = []
                 for class_name in classes_df:
                     class_features = gdf[gdf['LULC_Class'] == class_name]
@@ -1004,7 +1024,6 @@ else:
                         st.session_state.sampling_data['features'] = [f for f in st.session_state.sampling_data['features'] 
                                                                      if f['properties'].get('feature_id', f['properties'].get('id')) != selected_feature_id]
                         st.success(f"Feature ID #{selected_feature_id} telah dihapus")
-                        st.rerun()
                     st.metric("Total Fitur", len(gdf_display))
 
                 col2, col3, col4, col5, col6 = st.columns(5)
