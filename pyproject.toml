@@ -16,6 +16,7 @@ dependencies = [
     "tqdm",
     "pillow",
     "shapely",
-    "ipykernel"
+    "ipykernel",
+    "streamlit_folium"
 ]
 requires-python = ">=3.9"

@@ -13,7 +13,7 @@ initialize_earth_engine()
 
 #Page configuration
 st.set_page_config(
-    page_title="Thematic Accuracy Assessment",
+    page_title="Penilaian Akurasi Tematik",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -39,17 +39,17 @@ def get_accuracy_manager():
 manager = get_accuracy_manager()
 
 # Page header
-st.title("Thematic Accuracy Assessment")
+st.title("Penilaian Akurasi Tematik")
 st.divider()
 
 st.markdown("""
-Evaluate the thematic accuracy of your land cover classification from Module 6 using independent validation data. 
-In order to run this module you need an ground reference data containing class ID and class name similar to a ROI
-The accuracy of land cover map is evaluated using a confusion matrix, with the following key metrics
+Evaluasi akurasi tematik dari klasifikasi tutupan lahan Anda dari Modul 6 menggunakan data validasi independen. 
+Untuk menjalankan modul ini Anda memerlukan data referensi lapangan yang berisi ID kelas dan nama kelas serupa dengan ROI
+Akurasi peta tutupan lahan dievaluasi menggunakan matriks konfusi, dengan metrik kunci berikut
 
-- **Overall Accuracy** with confidence intervals
-- **Kappa Coefficient** for agreement assessment  
-- **F1-Score** for class-level performance
+- **Akurasi Keseluruhan** dengan interval kepercayaan
+- **Koefisien Kappa** untuk penilaian kesepakatan  
+- **Skor F1** untuk kinerja tingkat kelas
 """)
 
 st.markdown("---")
@@ -58,11 +58,11 @@ st.markdown("---")
 def check_prerequisites():
     """Check if required data from previous modules is available"""
     if 'classification_result' not in st.session_state or st.session_state.classification_result is None:
-        st.error("❌ No classification result found from Module 6.")
-        st.warning("Please complete Module 6 first to generate a land cover classification map.")
+        st.error("❌ Tidak ditemukan hasil klasifikasi dari Modul 6.")
+        st.warning("Selesaikan Modul 6 terlebih dahulu untuk menghasilkan peta klasifikasi tutupan lahan.")
         st.stop()
     else:
-        st.success("✅ Classification map loaded from Module 6")
+        st.success("✅ Peta klasifikasi dimuat dari Modul 6")
         return st.session_state.classification_result
 
 #Initialize the functions
@@ -117,13 +117,13 @@ def process_shapefile_upload(uploaded_file):
 #similar to module 1 but wrap in function
 def render_validation_upload():
     """Render validation data upload section"""
-    st.subheader("Step 1: Upload Ground Reference Data")
-    st.info("📁 Upload a **.zip shapefile** containing your independent validation samples with class IDs.")
+    st.subheader("Langkah 1: Unggah Data Referensi Lapangan")
+    st.info("📁 Unggah **shapefile .zip** yang berisi sampel validasi independen Anda dengan ID kelas.")
 
-    uploaded_file = st.file_uploader("Choose a zipped shapefile (.zip)", type=["zip"])
+    uploaded_file = st.file_uploader("Pilih shapefile terkompresi (.zip)", type=["zip"])
 
     if uploaded_file:
-        with st.spinner("Processing validation data..."):
+        with st.spinner("Memproses data validasi..."):
             success, message, ee_data, gdf_cleaned = process_shapefile_upload(uploaded_file)
             
             if success:
@@ -134,20 +134,20 @@ def render_validation_upload():
                 st.session_state['validation_gdf'] = gdf_cleaned
                 
                 # Show data preview
-                with st.expander("📋 Data Preview"):
+                with st.expander("📋 Pratinjau Data"):
                     st.dataframe(gdf_cleaned.head(), use_container_width=True)
                 
                 # Show map preview
-                st.markdown("**📍 Validation Points Distribution:**")
+                st.markdown("**📍 Sebaran Titik Validasi:**")
                 centroid = gdf_cleaned.geometry.centroid.iloc[0]
                 preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=8)
-                preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="Validation Points")
+                preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="Titik Validasi")
                 preview_map.to_streamlit(height=500)
                 
             else:
                 st.error(f"❌ {message}")
                 if "Make sure your shapefile includes" not in message:
-                    st.info("💡 Ensure your shapefile includes all necessary files (.shp, .shx, .dbf, .prj)")
+                    st.info("💡 Pastikan shapefile Anda menyertakan semua file yang diperlukan (.shp, .shx, .dbf, .prj)")
 
 #run validation data upload
 render_validation_upload()
@@ -155,15 +155,15 @@ render_validation_upload()
 def user_input_for_accuracy_assessment():
     """Render accuracy assessment configuration and execution"""
     st.divider()
-    st.subheader("Step 2: Configure and Run Assessment")
+    st.subheader("Langkah 2: Konfigurasi dan Jalankan Penilaian")
 
     if "validation_data" not in st.session_state or st.session_state.validation_data is None:
-        st.warning("⚠️ Please upload your validation data first.")
+        st.warning("⚠️ Harap unggah data validasi Anda terlebih dahulu.")
         return
 
     gdf_cleaned = st.session_state.get('validation_gdf')
     if gdf_cleaned is None:
-        st.error("Validation data not properly loaded.")
+        st.error("Data validasi tidak berhasil dimuat dengan benar.")
         return
 
     # Configuration options
@@ -171,25 +171,25 @@ def user_input_for_accuracy_assessment():
     
     with col1:
         class_prop = st.selectbox(
-            "Class ID Field:",
+            "Kolom ID Kelas:",
             options=gdf_cleaned.columns.tolist(),
             index=gdf_cleaned.columns.get_loc("CLASS_ID") if "CLASS_ID" in gdf_cleaned.columns else 0,
-            help="Field containing numeric class identifiers (e.g., 1, 2, 3, 4)"
+            help="Kolom yang berisi pengenal kelas numerik (mis. 1, 2, 3, 4)"
         )
     
     with col2:
         scale = st.number_input(
-            "Pixel Size (meters):",
+            "Ukuran Piksel (meter):",
             min_value=10,
             max_value=1000,
             value=30,
-            help="Spatial resolution for sampling the classified map"
+            help="Resolusi spasial untuk pengambilan sampel pada peta terklasifikasi"
         )
 
     # Advanced options
-    with st.expander("⚙️ Advanced Options"):
+    with st.expander("⚙️ Opsi Lanjutan"):
         confidence = st.slider(
-            "Confidence Level for Accuracy Intervals:",
+            "Tingkat Kepercayaan untuk Interval Akurasi:",
             min_value=0.90,
             max_value=0.99,
             value=0.95,
@@ -198,8 +198,8 @@ def user_input_for_accuracy_assessment():
         )
 
     # Run assessment
-    if st.button("🎯 Evaluate Map Accuracy", type="primary", use_container_width=True):
-        with st.spinner("Running thematic accuracy assessment..."):
+    if st.button("🎯 Evaluasi Akurasi Peta", type="primary", use_container_width=True):
+        with st.spinner("Menjalankan penilaian akurasi tematik..."):
             success, results = manager.run_accuracy_assessment(
                 lcmap=lcmap,
                 validation_data=st.session_state.validation_data,
@@ -210,10 +210,10 @@ def user_input_for_accuracy_assessment():
 
             if success:
                 st.session_state["accuracy_results"] = results
-                st.success("✅ Thematic accuracy assessment completed!")
+                st.success("✅ Penilaian akurasi tematik selesai!")
                 st.rerun()
             else:
-                st.error(f"❌ Assessment failed: {results.get('error', 'Unknown error')}")
+                st.error(f"❌ Penilaian gagal: {results.get('error', 'Kesalahan tidak diketahui')}")
 
 #run user inpur function
 user_input_for_accuracy_assessment()
@@ -232,20 +232,20 @@ def render_accuracy_results():
         return
 
     st.divider()
-    st.subheader("Accuracy Assessment Results")
+    st.subheader("Hasil Penilaian Akurasi")
 
     #Prepared to display the key result
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.metric(
-            "Overall Accuracy", 
+            "Akurasi Keseluruhan", 
             f"{results['overall_accuracy']*100:.2f}%"
         )
     
     with col2:
         st.metric(
-            "Kappa Coefficient", 
+            "Koefisien Kappa", 
             f"{results['kappa']:.3f}"
         )
     
@@ -253,40 +253,40 @@ def render_accuracy_results():
         ci = results['overall_accuracy_ci']
         confidence_pct = int(results['confidence_level'] * 100)
         st.metric(
-            f"{confidence_pct}% Confidence Interval", 
+            f"Interval Kepercayaan {confidence_pct}%", 
             f"{ci[0]*100:.1f}% - {ci[1]*100:.1f}%"
         )
     
     with col4:
         st.metric(
-            "Sample Size", 
-            f"{results['n_total']} points"
+            "Ukuran Sampel", 
+            f"{results['n_total']} titik"
         )
 
     # Class-level metrics table
     st.markdown("---")
-    st.subheader("Class-Level Performance")
+    st.subheader("Kinerja per Kelas")
 
     df_metrics = pd.DataFrame({
-        "Class ID": range(len(results['producer_accuracy'])),
-        "Producer's Accuracy (%)": [round(v * 100, 2) for v in results['producer_accuracy']],
-        "User's Accuracy (%)": [round(v * 100, 2) for v in results['user_accuracy']],
-        "F1-Score (%)": [round(v * 100, 2) for v in results["f1_scores"]],
+        "ID Kelas": range(len(results['producer_accuracy'])),
+        "Akurasi Produsen (%)": [round(v * 100, 2) for v in results['producer_accuracy']],
+        "Akurasi Pengguna (%)": [round(v * 100, 2) for v in results['user_accuracy']],
+        "Skor F1 (%)": [round(v * 100, 2) for v in results["f1_scores"]],
     })
     
     st.dataframe(df_metrics, use_container_width=True)
 
     # Confusion matrix visualization
     st.markdown("---")
-    st.subheader("🔄 Confusion Matrix")
+    st.subheader("🔄 Matriks Konfusi")
 
     cm_array = results["confusion_matrix"]
     n_classes = len(cm_array)
     
     cm_df = pd.DataFrame(
         cm_array,
-        columns=[f"Predicted {i}" for i in range(n_classes)],
-        index=[f"Actual {i}" for i in range(n_classes)]
+        columns=[f"Prediksi {i}" for i in range(n_classes)],
+        index=[f"Aktual {i}" for i in range(n_classes)]
     )
     
     # Create heatmap
@@ -295,13 +295,13 @@ def render_accuracy_results():
         text_auto=True,
         aspect="auto",
         color_continuous_scale="Blues",
-        title="Confusion Matrix (Actual vs Predicted Classes)"
+        title="Matriks Konfusi (Kelas Aktual vs Prediksi)"
     )
     
     fig.update_layout(
         height=500,
-        xaxis_title="Predicted Class",
-        yaxis_title="Actual Class"
+        xaxis_title="Kelas Prediksi",
+        yaxis_title="Kelas Aktual"
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -325,7 +325,7 @@ def render_accuracy_results():
         csv_data = results_df.to_csv(index=False).encode('utf-8')
         
         st.download_button(
-            label="📥 Download Results Summary",
+            label="📥 Unduh Ringkasan Hasil",
             data=csv_data,
             file_name="accuracy_assessment_results.csv",
             mime="text/csv",
@@ -336,7 +336,7 @@ def render_accuracy_results():
         # Download detailed metrics
         detailed_csv = df_metrics.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Download Class Metrics",
+            label="📥 Unduh Metrik Kelas",
             data=detailed_csv,
             file_name="class_level_accuracy.csv",
             mime="text/csv",
@@ -350,11 +350,11 @@ def render_navigation():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Back to Module 6", use_container_width=True):
+        if st.button("⬅️ Kembali ke Modul 6", use_container_width=True):
             st.switch_page("pages/5_Module_6_Classification_and_LULC_Creation.py")
     
     with col2:
-        st.info("💡 Return to Module 6 to improve your classification model if needed")
+        st.info("💡 Kembali ke Modul 6 untuk meningkatkan model klasifikasi Anda jika diperlukan")
 
 # Render results and navigation
 render_accuracy_results()
