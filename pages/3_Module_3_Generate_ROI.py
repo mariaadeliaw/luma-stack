@@ -840,11 +840,74 @@ else:
                                     )
                                 st.dataframe(insufficient_display, use_container_width=True)
                     
-                    # Gunakan Data button for upload data
-                    st.divider()
-                    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-                    with col_btn2:
-                        if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_upload_data"):
+                    # Both buttons side by side
+                    col_left, col_right = st.columns(2)
+                    
+                    with col_left:
+                        if st.button("🎯 Lengkapi data dengan sampling on screen", type="secondary", use_container_width=True, key="extend_upload_data"):
+                            if 'training_gdf' in st.session_state and st.session_state['training_gdf'] is not None:
+                                uploaded_gdf = st.session_state['training_gdf']
+                                class_field = st.session_state.get('training_class_field')
+                                
+                                if 'sampling_data' not in st.session_state:
+                                    st.session_state.sampling_data = {'type': 'FeatureCollection', 'features': []}
+                                
+                                features_to_add = []
+                                feature_id_start = st.session_state.get('feature_count', 0) + 1
+                                
+                                for idx, row in uploaded_gdf.iterrows():
+                                    class_value = row[class_field] if class_field in row else None
+                                    if pd.isna(class_value):
+                                        continue
+                                        
+                                    if isinstance(class_value, (int, float)):
+                                        matching_rows = st.session_state['LULCTable'][st.session_state['LULCTable']['ID'] == class_value]
+                                        if len(matching_rows) > 0:
+                                            class_name = matching_rows['LULC_Type'].values[0]
+                                            class_id = int(class_value)
+                                            class_color = matching_rows['color_palette'].values[0]
+                                        else:
+                                            continue
+                                    else:
+                                        matching_rows = st.session_state['LULCTable'][st.session_state['LULCTable']['LULC_Type'] == class_value]
+                                        if len(matching_rows) > 0:
+                                            class_name = class_value
+                                            class_id = int(matching_rows['ID'].values[0])
+                                            class_color = matching_rows['color_palette'].values[0]
+                                        else:
+                                            continue
+                                    
+                                    geom = row.geometry
+                                    if geom.geom_type == 'Polygon':
+                                        geom = geom.centroid
+                                    
+                                    feature = {
+                                        'type': 'Feature',
+                                        'geometry': {
+                                            'type': 'Point',
+                                            'coordinates': [geom.x, geom.y]
+                                        },
+                                        'properties': {
+                                            'feature_id': feature_id_start + len(features_to_add),
+                                            'LULC_Class': class_name,
+                                            'LULC_ID': class_id,
+                                            'Class_Color': class_color,
+                                            'source': 'uploaded'
+                                        }
+                                    }
+                                    features_to_add.append(feature)
+                                
+                                st.session_state.sampling_data['features'].extend(features_to_add)
+                                st.session_state.feature_count = st.session_state.get('feature_count', 0) + len(features_to_add)
+                                st.session_state['switch_to_tab2'] = True
+                                st.session_state['uploaded_data_loaded_to_tab2'] = True
+                                
+                                st.success(f"✅ {len(features_to_add)} sampel dari data upload telah dimuat ke sampling on screen!")
+                                st.info("🔄 Beralih ke tab 'Sampling On Screen'...")
+                                st.rerun()
+                    
+                    with col_right:
+                        if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", use_container_width=True, key="use_upload_data"):
                             train_data = st.session_state.get('train_data_final_upload')
                             total_samples = len(train_data) if train_data is not None else 0
                             st.session_state.update({
@@ -856,68 +919,6 @@ else:
                                 'training_data_count': total_samples
                             })
                             st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Upload Shapefile)")
-                            
-                            if st.button("🎯 Lengkapi data dengan sampling on screen", type="secondary", use_container_width=True):
-                                if 'training_gdf' in st.session_state and st.session_state['training_gdf'] is not None:
-                                    uploaded_gdf = st.session_state['training_gdf']
-                                    class_field = st.session_state.get('training_class_field')
-                                    
-                                    if 'sampling_data' not in st.session_state:
-                                        st.session_state.sampling_data = {'type': 'FeatureCollection', 'features': []}
-                                    
-                                    features_to_add = []
-                                    feature_id_start = st.session_state.get('feature_count', 0) + 1
-                                    
-                                    for idx, row in uploaded_gdf.iterrows():
-                                        class_value = row[class_field] if class_field in row else None
-                                        if pd.isna(class_value):
-                                            continue
-                                            
-                                        if isinstance(class_value, (int, float)):
-                                            matching_rows = st.session_state['LULCTable'][st.session_state['LULCTable']['ID'] == class_value]
-                                            if len(matching_rows) > 0:
-                                                class_name = matching_rows['LULC_Type'].values[0]
-                                                class_id = int(class_value)
-                                                class_color = matching_rows['color_palette'].values[0]
-                                            else:
-                                                continue
-                                        else:
-                                            matching_rows = st.session_state['LULCTable'][st.session_state['LULCTable']['LULC_Type'] == class_value]
-                                            if len(matching_rows) > 0:
-                                                class_name = class_value
-                                                class_id = int(matching_rows['ID'].values[0])
-                                                class_color = matching_rows['color_palette'].values[0]
-                                            else:
-                                                continue
-                                        
-                                        geom = row.geometry
-                                        if geom.geom_type == 'Polygon':
-                                            geom = geom.centroid
-                                        
-                                        feature = {
-                                            'type': 'Feature',
-                                            'geometry': {
-                                                'type': 'Point',
-                                                'coordinates': [geom.x, geom.y]
-                                            },
-                                            'properties': {
-                                                'feature_id': feature_id_start + len(features_to_add),
-                                                'LULC_Class': class_name,
-                                                'LULC_ID': class_id,
-                                                'Class_Color': class_color,
-                                                'source': 'uploaded'
-                                            }
-                                        }
-                                        features_to_add.append(feature)
-                                    
-                                    st.session_state.sampling_data['features'].extend(features_to_add)
-                                    st.session_state.feature_count = st.session_state.get('feature_count', 0) + len(features_to_add)
-                                    st.session_state['switch_to_tab2'] = True
-                                    st.session_state['uploaded_data_loaded_to_tab2'] = True
-                                    
-                                    st.success(f"✅ {len(features_to_add)} sampel dari data upload telah dimuat ke sampling on screen!")
-                                    st.info("🔄 Beralih ke tab 'Sampling On Screen'...")
-                                    st.rerun()
                 
 
 
@@ -1412,7 +1413,7 @@ else:
 
 
 
-st.divider()
+
 st.divider()
 st.subheader("Navigasi Modul")
 col1, col2 = st.columns(2)
