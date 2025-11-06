@@ -74,10 +74,11 @@ class Reflectance_Data:
         }
     }
 #Define the thermal datasets. The thermal bands used is from Collection 2 Top-of-atmosphere data 
-#The TOA data provide consistent result and contain minimum mising pixel data
+#The TOA data provide consistent result and contain minimum missing pixel data
+#Note: Landsat 1-3 MSS sensors did not have thermal bands, so they are not included
     THERMAL_DATASETS = {
         'L4_TOA': {
-            'collection':'LANDSAT/LT04/C02/T1_TOA"',
+            'collection': 'LANDSAT/LT04/C02/T1_TOA',
             'cloud_property': 'CLOUD_COVER_LAND',
             'type': 'landsat_toa',
             'sensor': 'L4',
@@ -125,6 +126,28 @@ class Reflectance_Data:
         self.logger.setLevel(log_level)
 
         self.logger.info("ReflectanceData initialized.")
+    
+    def has_thermal_capability(self, optical_data):
+        """
+        Check if a given optical dataset has corresponding thermal bands.
+        
+        Parameters
+        ----------
+        optical_data : str
+            Optical dataset code (e.g., 'L8_SR', 'L1_RAW')
+            
+        Returns
+        -------
+        bool
+            True if thermal bands are available, False otherwise
+        """
+        # Landsat 1-3 MSS sensors did not have thermal bands
+        if optical_data in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
+            return False
+        
+        # Check if corresponding thermal dataset exists
+        thermal_data = optical_data.replace('_SR', '_TOA')
+        return thermal_data in self.THERMAL_DATASETS
     #Function to mask clouds, shadow, and cirrus. Using QA Bands
     def mask_landsat_sr(self, image,cloud_conf_thresh=2, shadow_conf_thresh=2, cirrus_conf_thresh=2):
             """
@@ -397,7 +420,7 @@ class Reflectance_Data:
             thermal_band_map = {
                 'L4': ['B6'],
                 'L5': ['B6'],
-                'L7': ['B6'],
+                'L7': ['B6_VCID_2'],
                 'L8': ['B10'],
                 'L9': ['B10']
             }
@@ -414,7 +437,7 @@ class Reflectance_Data:
 
         #Decide which thermal band to select
         sensor = config['sensor']
-        if sensor == 'L5':
+        if sensor in ['L4', 'L5']:
             thermal_band = 'B6'
         elif sensor == 'L7':
             thermal_band = 'B6_VCID_2'

@@ -280,16 +280,21 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
             compute_detailed_stats=False
         )
         #Second, use the same parameter as multispectral data and use it to search collection 2 TOA data. Retrive thermal band only
-        thermal_data = optical_data.replace('_SR', '_TOA')  # match Landsat pair automatically
-        thermal_collection, meta = reflectance.get_thermal_bands(
-            aoi=aoi,
-            start_date=start_date,
-            end_date=end_date,
-            thermal_data=thermal_data,
-            cloud_cover=cloud_cover,
-            verbose=False,
-            compute_detailed_stats=False
-        )
+        #Skip thermal bands for Landsat 1-3 MSS (no thermal capability)
+        thermal_collection = None
+        if optical_data not in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
+            thermal_data = optical_data.replace('_SR', '_TOA')  # match Landsat pair automatically
+            thermal_collection, meta = reflectance.get_thermal_bands(
+                aoi=aoi,
+                start_date=start_date,
+                end_date=end_date,
+                thermal_data=thermal_data,
+                cloud_cover=cloud_cover,
+                verbose=False,
+                compute_detailed_stats=False
+            )
+        else:
+            st.info("ℹ️ Note: Landsat 1-3 MSS sensors did not have thermal bands. Only multispectral bands will be processed.")
         #Get collection retrival statistic
         stats = Reflectance_Stats()
         detailed_stats = stats.get_collection_statistics(collection, compute_stats=True, print_report=True)
@@ -403,16 +408,31 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
             'max': 300,
             'gamma': 0.4
         }
-        vis_params = {
-            'min': 0,
-            'max': 0.4,
-            'gamma': [0.5, 0.9, 1],
-            'bands':['NIR', 'RED', 'GREEN']
-        }
-        #Create and image composite/mosaic for thermal bands
-        thermal_median = thermal_collection.median().clip(aoi)
-        #composite for multispectral data and stacked them with thermal bands. Also convert to float()
-        composite = collection.median().clip(aoi).addBands(thermal_median).toFloat()
+        # Set visualization parameters based on sensor type
+        if optical_data in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
+            # Landsat 1-3 MSS bands: GREEN, RED, NIR1, NIR2
+            vis_params = {
+                'min': 0,
+                'max': 255,  # MSS data is in DN values
+                'gamma': [0.8, 0.9, 1],
+                'bands': ['NIR1', 'RED', 'GREEN']
+            }
+        else:
+            # Landsat 4-9 Surface Reflectance
+            vis_params = {
+                'min': 0,
+                'max': 0.4,
+                'gamma': [0.5, 0.9, 1],
+                'bands': ['NIR', 'RED', 'GREEN']
+            }
+        #Create and image composite/mosaic for thermal bands (if available)
+        if thermal_collection is not None:
+            thermal_median = thermal_collection.median().clip(aoi)
+            #composite for multispectral data and stacked them with thermal bands. Also convert to float()
+            composite = collection.median().clip(aoi).addBands(thermal_median).toFloat()
+        else:
+            #For Landsat 1-3 MSS: no thermal bands available
+            composite = collection.median().clip(aoi).toFloat()
         # Store in session state for use in other modules
         st.session_state['composite'] = composite
         st.session_state['Image_metadata'] = detailed_stats
@@ -421,10 +441,14 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
         # Display the image using geemap
         centroid = gdf.geometry.centroid.iloc[0]
         m = geemap.Map(center=[centroid.y, centroid.x], zoom=6)
-        m.addLayer(thermal_median, thermal_vis, "Landsat Thermal Band" )
+        
+        # Add thermal layer only if available (not for Landsat 1-3 MSS)
+        if thermal_collection is not None:
+            m.addLayer(thermal_median, thermal_vis, "Landsat Thermal Band")
+        
         m.addLayer(collection, vis_params, 'Landsat Collection', shown=True)
-        m.addLayer(composite, vis_params, 'Landsat Composite', shown= True)
-        m.add_geojson(gdf.__geo_interface__, layer_name="AOI", shown = False)
+        m.addLayer(composite, vis_params, 'Landsat Composite', shown=True)
+        m.add_geojson(gdf.__geo_interface__, layer_name="AOI", shown=False)
         m.to_streamlit(height=600)   
 else:
     st.info("Unggah Area Minat dan tentukan kriteria pencarian untuk memulai.")
