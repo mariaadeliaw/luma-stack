@@ -11,7 +11,7 @@ import zipfile
 import os
 import math
 from shapely.geometry import shape, Point, Polygon, mapping
-from epistemx.module_3 import InputCheck, SyncTrainData, SplitTrainData, LULCSamplingTool
+from epistemx.module_3 import InputCheck, SyncTrainData, LULCSamplingTool
 from epistemx.ee_config import initialize_earth_engine
 
 # Initialize Earth Engine with service account
@@ -103,6 +103,8 @@ if reference_data_source:
     TrainField = 'kelas'
     
     if st.button("Muat Data Pelatihan Referensi", type="primary"):
+        # Reset flags to ensure preview shows after loading
+        st.session_state['show_ref_summary'] = False
         try:
             with st.spinner("Memuat dan memproses data pelatihan referensi..."):
                 if AOI_GDF is not None:
@@ -157,7 +159,7 @@ if reference_data_source:
                 }
                 
 
-                
+
                 try:
                     TrainDataDict = SyncTrainData.LoadTrainData(
                         landcover_df=LULCTable,
@@ -291,13 +293,164 @@ if reference_data_source:
                 status_text.text("Pemrosesan selesai!")
                 st.session_state['data_processed_ref'] = True
                 st.session_state['reference_data_loaded'] = True
+                # Reset summary flag so preview shows again
+                st.session_state['show_ref_summary'] = False
                 st.success("Data pelatihan referensi berhasil dimuat dan diproses!")
-                st.rerun()
                 
         except Exception as e:
             st.error(f"Error memuat data pelatihan referensi: {e}")
     
-    if st.session_state.get('data_processed_ref', False):
+    # Show preview of reference data whenever data is available (unless explicitly viewing summary)
+    train_data_ref = st.session_state.get('train_data_final_ref')
+    if (train_data_ref is not None and len(train_data_ref) > 0 and 
+        st.session_state.get('reference_data_loaded', False) and 
+        not st.session_state.get('show_ref_summary', False)):
+        
+        st.divider()
+        st.subheader("Preview Data Pelatihan Referensi")
+        
+        if True:  # Always show if we reach this point
+            st.markdown("**Preview data pelatihan (tabel):**")
+            # Show first 10 rows of the training data
+            preview_df = train_data_ref.head(10)
+            st.dataframe(preview_df, width="stretch")
+            
+            st.markdown("**Preview data pelatihan (peta):**")
+            import folium
+            from streamlit_folium import st_folium
+            
+            # Initialize map
+            m = folium.Map(tiles="OpenStreetMap")
+        
+            # Add basemap from module 1 if available
+            if st.session_state.geotiff_overlay is not None:
+                vis_params = {
+                    'bands': ['RED', 'GREEN', 'BLUE'],
+                    'min': 0,
+                    'max': 0.3
+                }
+                ee_image = st.session_state.geotiff_overlay.clip(AOI)
+                def add_ee_layer(self, ee_image_object, vis_params, name, opacity=1):
+                    map_id_dict = ee.Image(ee_image_object).getMapId(vis_params)
+                    folium.raster_layers.TileLayer(
+                        tiles=map_id_dict['tile_fetcher'].url_format,
+                        attr='Google Earth Engine',
+                        name=name,
+                        overlay=True,
+                        control=True,
+                        opacity=opacity
+                    ).add_to(self)
+                folium.Map.add_ee_layer = add_ee_layer
+                m.add_ee_layer(ee_image, vis_params, "Komposit Citra")
+        
+            # Add AOI layer
+            if AOI_GDF is not None:
+                aoi_gdf_wgs84 = AOI_GDF.to_crs('EPSG:4326') if AOI_GDF.crs != 'EPSG:4326' else AOI_GDF
+                folium.GeoJson(
+                    aoi_gdf_wgs84,
+                    name="AOI",
+                    style_function=lambda x: {'fillColor': 'transparent', 'color': '#FFD700', 'weight': 3}
+                ).add_to(m)
+        
+            # Add training data layer with colors
+            gdf_wgs84 = train_data_ref.to_crs('EPSG:4326') if train_data_ref.crs != 'EPSG:4326' else train_data_ref
+            class_to_color = dict(zip(LULCTable['LULC_Type'], LULCTable['color_palette']))
+            class_to_id = dict(zip(LULCTable['LULC_Type'], LULCTable['ID']))
+            
+            # Use the correct field name for reference data (usually 'kelas')
+            TrainField_ref = 'kelas'  # Reference data uses 'kelas' field
+            
+            for idx, row in gdf_wgs84.iterrows():
+                class_value = row[TrainField_ref] if TrainField_ref in row else None
+                if isinstance(class_value, int):
+                    # Look up class name by ID
+                    matching_rows = LULCTable[LULCTable['ID'] == class_value]
+                    class_name = matching_rows['LULC_Type'].values[0] if len(matching_rows) > 0 else 'Unknown'
+                else:
+                    # Use the class value directly if it's a string and exists in color mapping
+                    class_name = class_value if class_value in class_to_color else 'Unknown'
+                color = class_to_color.get(class_name, '#808080')
+                geom = row.geometry
+                if geom.geom_type == 'Point':
+                    folium.Marker(
+                        location=[geom.y, geom.x],
+                        icon=folium.Icon(color='white', icon_color=color, icon='circle', prefix='fa'),
+                        popup=f"Class: {class_name}"
+                    ).add_to(m)
+                elif geom.geom_type == 'Polygon':
+                    folium.GeoJson(
+                        geom,
+                        name=class_name,
+                        style_function=lambda x, color=color: {'fillColor': color, 'color': color, 'weight': 2}
+                    ).add_to(m)
+        
+            # Add legend
+            legend_html = '''
+            <div style="
+                position: fixed; 
+                bottom: 10px; 
+                left: 10px; 
+                width: auto; 
+                height: auto; 
+                border: 1px solid #999; 
+                z-index: 9999; 
+                font-size: 12px; 
+                background-color: rgba(255, 255, 255, 0.9); 
+                padding: 10px 14px; 
+                border-radius: 6px; 
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            ">
+                <b style="font-size: 13px; display: block; margin-bottom: 8px;">Legend</b>
+            '''
+
+            for class_name, color in class_to_color.items():
+                legend_html += f'''
+                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                    <div style="
+                        background: {color}; 
+                        width: 16px; 
+                        height: 16px; 
+                        margin-right: 8px; 
+                        border: 1px solid #444; 
+                        border-radius: 3px;
+                    "></div>
+                    <span style="font-size: 12px; white-space: nowrap;">{class_name}</span>
+                </div>
+                '''
+
+            legend_html += '</div>'
+            m.get_root().html.add_child(folium.Element(legend_html))
+
+            # Fit bounds to data or AOI
+            if not gdf_wgs84.empty:
+                bounds = gdf_wgs84.total_bounds
+            elif AOI_GDF is not None:
+                bounds = aoi_gdf_wgs84.total_bounds
+            else:
+                bounds = None
+            if bounds is not None:
+                m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+            
+            # Layer control
+            folium.LayerControl().add_to(m)
+            
+            # Display map (no returned objects to prevent reloads on interaction)
+            st_folium(m, width=None, height=500, key="ref_preview_map", returned_objects=[])
+            
+            # Button to continue to summary
+            st.divider()
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("📊 Lanjut ke Ringkasan Data", type="primary", width="stretch"):
+                    st.session_state['show_ref_summary'] = True
+            with col2:
+                st.info("Preview menampilkan maksimal 10 sampel pertama")
+        else:
+            st.warning("Tidak ada data pelatihan untuk ditampilkan dalam preview.")
+            if st.button("📊 Lanjut ke Ringkasan Data", type="primary"):
+                st.session_state['show_ref_summary'] = True
+    
+    if st.session_state.get('data_processed_ref', False) and st.session_state.get('show_ref_summary', False):
             st.divider()
             st.subheader("B. Ringkasan Data Pelatihan")
             
@@ -325,7 +478,7 @@ if reference_data_source:
                         lambda x: f"{x:.2f}%" if isinstance(x, (int, float)) else x
                     )
                 
-                st.dataframe(display_df, use_container_width=True)
+                st.dataframe(display_df, width="stretch")
                 
                 if 'insufficient_df_ref' in st.session_state and st.session_state['insufficient_df_ref'] is not None:
                     if len(st.session_state['insufficient_df_ref']) > 0:
@@ -339,57 +492,24 @@ if reference_data_source:
                                 )
                             st.dataframe(insufficient_display, use_container_width=True)
             
+            # Gunakan Data button for reference data
             st.divider()
-            st.subheader("C. Pembagian Data Pelatihan/Validasi")
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_ref_data"):
+                    train_data = st.session_state.get('train_data_final_ref')
+                    total_samples = len(train_data) if train_data is not None else 0
+                    st.session_state.update({
+                        'train_data_dict': st.session_state.get('train_data_dict_ref'),
+                        'train_final': train_data,
+                        'valid_final': None,
+                        'training_data_finalized': True,
+                        'training_data_source': 'Referensi',
+                        'training_data_count': total_samples
+                    })
+                    st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Referensi)")
             
-            split_data = st.checkbox("Bagi data menjadi set pelatihan dan validasi", value=True, key="split_ref")
-            
-            if split_data:
-                split_ratio = st.slider("Persentase data pelatihan:", min_value=0.5, max_value=0.9, value=0.7, step=0.05, key="split_ratio_ref")
-                
-                if st.button("Bagi Data Pelatihan", type="primary", key="split_ref_data"):
-                    try:
-                        if 'train_data_final_ref' in st.session_state and st.session_state['train_data_final_ref'] is not None:
-                            train_data = st.session_state['train_data_final_ref']
-                            
-                            # Perform split
-                            train_final, valid_final = SplitTrainData.SplitProcess(
-                                train_data,
-                                TrainSplitPct=split_ratio,
-                                random_state=123
-                            )
-                            
-                            st.session_state['train_final_ref'] = train_final
-                            st.session_state['valid_final_ref'] = valid_final
-                            st.session_state['split_completed_ref'] = True
-                            
-                            col1, col2, col3 = st.columns(3)
-                            with col1:
-                                st.metric("Sampel Pelatihan", len(train_final))
-                            with col2:
-                                st.metric("Sampel Validasi", len(valid_final))
-                            with col3:
-                                st.metric("Total Sampel", len(train_data))
-                            
-                            st.success("Pembagian data berhasil diselesaikan!")
-                            
-                            with st.expander("Preview Data yang Dibagi"):
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    st.markdown("**Preview Data Pelatihan:**")
-                                    st.dataframe(train_final.head())
-                                with col2:
-                                    st.markdown("**Preview Data Validasi:**")
-                                    st.dataframe(valid_final.head())
-                                    
-                    except Exception as e:
-                        st.error(f"Error membagi data: {e}")
-            else:
-                if 'train_data_final_ref' in st.session_state and st.session_state['train_data_final_ref'] is not None:
-                    st.session_state['train_final_ref'] = st.session_state['train_data_final_ref']
-                    st.session_state['valid_final_ref'] = None
-                    st.session_state['split_completed_ref'] = True
-                    st.info("Menggunakan seluruh dataset sebagai data pelatihan.")
+
 
 else:
     st.subheader("Pilih Mode Pengumpulan Data Pelatihan")
@@ -400,11 +520,11 @@ else:
     active_tab = st.session_state.get('active_tab', 0)
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("📤 Unggah Data Sampel", type="primary" if active_tab == 0 else "secondary", use_container_width=True, key="tab_button_1"):
+        if st.button("📤 Unggah Data Sampel", type="primary" if active_tab == 0 else "secondary", width="stretch", key="tab_button_1"):
             st.session_state['active_tab'] = 0
             st.rerun()
     with col2:
-        if st.button("🎯 Sampling On Screen", type="primary" if active_tab == 1 else "secondary", use_container_width=True, key="tab_button_2"):
+        if st.button("🎯 Sampling On Screen", type="primary" if active_tab == 1 else "secondary", width="stretch", key="tab_button_2"):
             st.session_state['active_tab'] = 1
             st.rerun()
     
@@ -573,8 +693,8 @@ else:
                             # Layer control
                             folium.LayerControl().add_to(m)
                             
-                            # Display map
-                            st_folium(m, width=None, height=400, key="preview_map")
+                            # Display map (no returned objects to prevent reloads on interaction)
+                            st_folium(m, width=None, height=400, key="preview_map", returned_objects=[])
                             
                             if st.button("Proses Data Pelatihan", type="primary", key="process_uploaded_data"):
                                 # Store the data first
@@ -697,6 +817,23 @@ else:
                                         lambda x: f"{x:.2f}%" if isinstance(x, (int, float)) else x
                                     )
                                 st.dataframe(insufficient_display, use_container_width=True)
+                    
+                    # Gunakan Data button for upload data
+                    st.divider()
+                    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+                    with col_btn2:
+                        if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_upload_data"):
+                            train_data = st.session_state.get('train_data_final_upload')
+                            total_samples = len(train_data) if train_data is not None else 0
+                            st.session_state.update({
+                                'train_data_dict': st.session_state.get('train_data_dict_upload'),
+                                'train_final': train_data,
+                                'valid_final': None,
+                                'training_data_finalized': True,
+                                'training_data_source': 'Upload Shapefile',
+                                'training_data_count': total_samples
+                            })
+                            st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Upload Shapefile)")
                             
                             if st.button("🎯 Lengkapi data dengan sampling on screen", type="secondary", use_container_width=True):
                                 if 'training_gdf' in st.session_state and st.session_state['training_gdf'] is not None:
@@ -760,58 +897,7 @@ else:
                                     st.info("🔄 Beralih ke tab 'Sampling On Screen'...")
                                     st.rerun()
                 
-            st.divider()
-            st.subheader("C. Pembagian Data Pelatihan/Validasi")
-            
-            split_data = st.checkbox("Bagi data menjadi set pelatihan dan validasi", value=True, key="split_upload")
-            
-            if split_data:
-                split_ratio = st.slider("Persentase data pelatihan:", min_value=0.5, max_value=0.9, value=0.7, step=0.05, key="split_ratio_upload")
-                
-                if st.button("Bagi Data Pelatihan", type="primary", key="split_upload_data"):
-                        try:
-                            if 'train_data_final_upload' in st.session_state and st.session_state['train_data_final_upload'] is not None:
-                                train_data = st.session_state['train_data_final_upload']
-                                
-                                # Perform split
-                                train_final, valid_final = SplitTrainData.SplitProcess(
-                                    train_data,
-                                    TrainSplitPct=split_ratio,
-                                    random_state=123
-                                )
-                                
-                                st.session_state['train_final_upload'] = train_final
-                                st.session_state['valid_final_upload'] = valid_final
-                                st.session_state['split_completed_upload'] = True
-                                
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.metric("Sampel Pelatihan", len(train_final))
-                                with col2:
-                                    st.metric("Sampel Validasi", len(valid_final))
-                                with col3:
-                                    st.metric("Total Sampel", len(train_data))
-                                
-                                st.success("Pembagian data berhasil diselesaikan!")
-                                
-                                # Show preview of split data
-                                with st.expander("Preview Data yang Dibagi"):
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.markdown("**Preview Data Training:**")
-                                        st.dataframe(train_final.head())
-                                    with col2:
-                                        st.markdown("**Preview Data Validasi:**")
-                                        st.dataframe(valid_final.head())
-                                        
-                        except Exception as e:
-                            st.error(f"Error membagi data: {e}")
-                else:
-                    if 'train_data_final_upload' in st.session_state and st.session_state['train_data_final_upload'] is not None:
-                        st.session_state['train_final_upload'] = st.session_state['train_data_final_upload']
-                        st.session_state['valid_final_upload'] = None
-                        st.session_state['split_completed_upload'] = True
-                        st.info("Menggunakan seluruh dataset sebagai data pelatihan.")
+
 
     elif active_tab == 1:
         st.subheader("A. Buat data sampel (On Screen)")
@@ -874,12 +960,15 @@ else:
         config = basemap_configs.get(basemap_option, basemap_configs["CartoDB Positron"])
         m = folium.Map(location=map_center, zoom_start=st.session_state.map_zoom, **config)
 
-        if AOI_GDF is not None:
+        # Initialize map center ONLY if not already set
+        if AOI_GDF is not None and not st.session_state.get('initial_fit_done', False):
             aoi_gdf_wgs84 = AOI_GDF.to_crs('EPSG:4326') if AOI_GDF.crs != 'EPSG:4326' else AOI_GDF
             bounds = aoi_gdf_wgs84.total_bounds
-            st.session_state.center_lat, st.session_state.center_lon = (bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2
+            st.session_state.center_lat = (bounds[1] + bounds[3]) / 2
+            st.session_state.center_lon = (bounds[0] + bounds[2]) / 2
             max_diff = max(bounds[3] - bounds[1], bounds[2] - bounds[0])
             st.session_state.map_zoom = int(13 - math.log(max_diff + 0.01)) if max_diff > 0 else 5
+            st.session_state.initial_fit_done = True
 
         if show_geotiff and st.session_state.geotiff_overlay is not None:
             vis_params = {'bands': ['RED', 'GREEN', 'BLUE'], 'min': 0, 'max': 0.3}
@@ -947,7 +1036,12 @@ else:
         # Handle new feature drawing
         if map_output and map_output.get("last_active_drawing"):
             new_feature = map_output["last_active_drawing"]
-            if new_feature['geometry'] != st.session_state.last_recorded_feature:
+            
+            # Create a unique identifier for this geometry to prevent duplicates
+            geom_str = json.dumps(new_feature['geometry'], sort_keys=True)
+            
+            # Check if this is truly a new feature
+            if geom_str != st.session_state.get('last_recorded_feature'):
                 st.session_state.feature_count += 1
                 if 'properties' not in new_feature:
                     new_feature['properties'] = {}
@@ -968,14 +1062,19 @@ else:
                 else:
                     new_feature['properties']['LULC_ID'] = 0
                 
+                # Add to features list
                 st.session_state.sampling_data['features'].append(new_feature)
-                st.session_state.last_recorded_feature = new_feature['geometry']
-                # Store success message for next render
+                st.session_state.last_recorded_feature = geom_str
+                
+                # Store success message
                 st.session_state['last_added_feature'] = {
                     'id': st.session_state.feature_count,
                     'class': selected_class,
                     'type': new_feature['geometry']['type']
                 }
+                
+                # Force immediate rerun to show the new feature
+                st.rerun()
 
         st.subheader("Fitur LULC yang Terekam")
         if st.session_state.sampling_data['features']:
@@ -1201,86 +1300,47 @@ else:
                                     )
                                 st.dataframe(insufficient_display, use_container_width=True)
                 
+                # Gunakan Data button for sampling data
                 st.divider()
-                st.subheader("D. Pembagian Data Pelatihan/Validasi")
-                
-                split_data = st.checkbox("Bagi data menjadi set pelatihan dan validasi", value=True, key="split_sampling")
-                
-                if split_data:
-                    split_ratio = st.slider("Persentase data pelatihan:", min_value=0.5, max_value=0.9, value=0.7, step=0.05, key="split_ratio_sampling")
-                    
-                    if st.button("Bagi Data Pelatihan", type="primary", key="split_sampling_data"):
-                        try:
-                            if 'train_data_final_sampling' in st.session_state and st.session_state['train_data_final_sampling'] is not None:
-                                train_data = st.session_state['train_data_final_sampling']
-                                
-                                # Perform split
-                                train_final, valid_final = SplitTrainData.SplitProcess(
-                                    train_data,
-                                    TrainSplitPct=split_ratio,
-                                    random_state=123
-                                )
-                                
-                                st.session_state['train_final_sampling'] = train_final
-                                st.session_state['valid_final_sampling'] = valid_final
-                                st.session_state['split_completed_sampling'] = True
-                                
-                                col1, col2, col3 = st.columns(3)
-                                with col1:
-                                    st.metric("Sampel Pelatihan", len(train_final))
-                                with col2:
-                                    st.metric("Sampel Validasi", len(valid_final))
-                                with col3:
-                                    st.metric("Total Sampel", len(train_data))
-                                
-                                st.success("Pembagian data berhasil diselesaikan!")
-                                
-                                # Show preview of split data
-                                with st.expander("Preview Data yang Dibagi"):
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.markdown("**Preview Data Training:**")
-                                        st.dataframe(train_final.head())
-                                    with col2:
-                                        st.markdown("**Preview Data Validasi:**")
-                                        st.dataframe(valid_final.head())
-                                        
-                        except Exception as e:
-                            st.error(f"Error membagi data: {e}")
-                else:
-                    if 'train_data_final_sampling' in st.session_state and st.session_state['train_data_final_sampling'] is not None:
-                        st.session_state['train_final_sampling'] = st.session_state['train_data_final_sampling']
-                        st.session_state['valid_final_sampling'] = None
-                        st.session_state['split_completed_sampling'] = True
-                        st.info("Menggunakan seluruh dataset sebagai data pelatihan.")
+                col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+                with col_btn2:
+                    if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_sampling_data"):
+                        train_data = st.session_state.get('train_data_final_sampling')
+                        total_samples = len(train_data) if train_data is not None else 0
+                        st.session_state.update({
+                            'train_data_dict': st.session_state.get('train_data_dict_sampling'),
+                            'train_final': train_data,
+                            'valid_final': None,
+                            'training_data_finalized': True,
+                            'training_data_source': 'Sampling On Screen',
+                            'training_data_count': total_samples
+                        })
+                        st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Sampling On Screen)")
 
+
+
+
+st.divider()
 st.divider()
 st.subheader("Navigasi Modul")
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("⬅️ Kembali ke Modul 2: Skema Klasifikasi", use_container_width=True):
+    if st.button("⬅️ Kembali ke Modul 2: Skema Klasifikasi", width="stretch"):
         st.switch_page("pages/2_Module_2_Classification_scheme.py")
 
 with col2:
     training_ready = any([st.session_state.get('data_processed_ref', False), st.session_state.get('data_processed_upload', False), st.session_state.get('data_processed_sampling', False)])
-    if training_ready:
-        if st.button("➡️ Lanjut ke Modul 4: Klasifikasi", type="primary", use_container_width=True):
+    if training_ready and st.session_state.get('training_data_finalized', False):
+        if st.button("➡️ Lanjut ke Modul 4: Analisis ROI", type="primary", width="stretch"):
             st.switch_page("pages/4_Module_4_Analyze_ROI.py")
+    elif training_ready:
+        st.button("⚠️ Klik 'Gunakan Data' Dulu", disabled=True, width="stretch", help="Silakan klik tombol 'Gunakan Data Pelatihan Ini' untuk melanjutkan")
     else:
-        st.button("🔒 Selesaikan Data Pelatihan Dulu", disabled=True, use_container_width=True, help="Silakan proses data pelatihan sebelum melanjutkan")
+        st.button("🔒 Selesaikan Data Pelatihan Dulu", disabled=True, width="stretch", help="Silakan kumpulkan dan proses data pelatihan terlebih dahulu")
 
-if training_ready:
-    data_sources = [('data_processed_ref', 'train_data_final_ref', 'Referensi'), ('data_processed_upload', 'train_data_final_upload', 'Upload'), ('data_processed_sampling', 'train_data_final_sampling', 'Sampling')]
-    for processed_key, final_key, source_name in data_sources:
-        if st.session_state.get(processed_key, False):
-            total_samples = len(st.session_state.get(final_key, []))
-            st.session_state.update({
-                'train_data_dict': st.session_state.get(f'train_data_dict_{source_name.lower()}'),
-                'train_final': st.session_state.get(f'train_final_{source_name.lower()}'),
-                'valid_final': st.session_state.get(f'valid_final_{source_name.lower()}', None)
-            })
-            st.success(f"✅ Data pelatihan siap dengan {total_samples} sampel ({source_name})")
-            break
-else:
-    st.info("Selesaikan pengumpulan dan pemrosesan data pelatihan untuk melanjutkan")
+# Show final status
+if training_ready and not st.session_state.get('training_data_finalized', False):
+    st.info("📋 Data pelatihan tersedia. Klik 'Gunakan Data Pelatihan Ini' untuk melanjutkan ke modul berikutnya.")
+elif not training_ready:
+    st.info("� Sitlakan kumpulkan data pelatihan menggunakan salah satu metode di atas.")

@@ -92,13 +92,18 @@ try:
                         logger.info("Filtering by AOI bounds...")
                         logger.info(f"AOI geometry type: {type(aoi_geometry)}")
                         try:
-                            # Convert AOI to EE geometry if it's a GeoDataFrame
-                            if hasattr(aoi_geometry, 'geometry'):
-                                # Get the first geometry and convert to EE
+                            # Convert AOI to EE geometry based on type
+                            if hasattr(aoi_geometry, 'geometry') and hasattr(aoi_geometry.geometry, 'iloc'):
+                                # It's a GeoDataFrame - get the first geometry
                                 geom = aoi_geometry.geometry.iloc[0]
                                 ee_geom = ee.Geometry(geom.__geo_interface__)
                                 training_fc = training_fc.filterBounds(ee_geom)
+                            elif hasattr(aoi_geometry, '__geo_interface__'):
+                                # It's a shapely geometry
+                                ee_geom = ee.Geometry(aoi_geometry.__geo_interface__)
+                                training_fc = training_fc.filterBounds(ee_geom)
                             else:
+                                # Assume it's already an EE geometry
                                 training_fc = training_fc.filterBounds(aoi_geometry)
                             
                             filtered_count = training_fc.size().getInfo()
@@ -113,8 +118,35 @@ try:
                             logger.info("Using original dataset without AOI filter")
                             # Keep original training_fc without filtering
                     
-                    # Manual conversion to GeoDataFrame
+                    # Manual conversion to GeoDataFrame with size limit
                     logger.info("Converting to GeoDataFrame...")
+                    
+                    # Check collection size and limit if necessary
+                    collection_size = training_fc.size().getInfo()
+                    logger.info(f"Collection size: {collection_size}")
+                    
+                    if collection_size > 5000:
+                        logger.warning(f"Collection has {collection_size} features, limiting to 5000 for processing")
+                        training_fc = training_fc.limit(5000)
+                        collection_size = 5000
+                    
+                    if collection_size == 0:
+                        logger.warning("No features found in collection")
+                        return {
+                            'training_data': gpd.GeoDataFrame(columns=['kelas', 'geometry']),
+                            'landcover_df': landcover_df,
+                            'class_field': 'kelas',
+                            'validation_results': {
+                                'total_points': 0,
+                                'valid_points': 0,
+                                'points_after_class_filter': 0,
+                                'invalid_classes': [],
+                                'outside_aoi': [],
+                                'insufficient_samples': [],
+                                'warnings': ['No training data found in AOI']
+                            }
+                        }
+                    
                     info = training_fc.getInfo()
                     features = info['features']
                     logger.info(f"Features to convert: {len(features)}")
