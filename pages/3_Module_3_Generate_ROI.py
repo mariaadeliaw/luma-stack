@@ -14,9 +14,8 @@ from shapely.geometry import shape, Point, Polygon, mapping
 from epistemx.module_3 import InputCheck, SyncTrainData, LULCSamplingTool
 from epistemx.ee_config import initialize_earth_engine
 
-# Initialize Earth Engine with service account
-service_account_path = "auth/fazamahezs-c6a5e802b04c.json"
-initialize_earth_engine(service_account_file=service_account_path)
+# Initialize Earth Engine
+initialize_earth_engine()
 
 # Initialize session state variables
 session_defaults = {
@@ -38,15 +37,37 @@ for key, default_value in session_defaults.items():
     if key not in st.session_state:
         st.session_state[key] = default_value
 
+# Load custom CSS
+def load_css():
+    """Load custom CSS for EpistemX theme"""
+    try:
+        with open('.streamlit/style.css') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
+
+# Apply custom theme
+load_css()
+
 st.title("Penentuan Data Sampel Klasifikasi Tutupan/penggunaan lahan")
 st.divider()
-st.markdown("Modul ini memungkinkan Anda untuk menyiapkan dan menentukan data sampel yang digunakan untuk proses klasifikasi tutupan/penggunaan lahan. "
-    "Untuk menggunakan modul ini, hasil dari modul 1 dan 2 harus sudah tersedia. Jika sudah terpenuhi, Anda dapat:")
-st.markdown("1. Mengunggah data sampel pelatihan.\n2. Membuat data sampel pelatihan melalui sampling on screen.\n3. Menggunakan data sampel default Epistem.")
+st.markdown("Modul ini memungkinkan Anda untuk menyiapkan dan menentukan data sampel yang digunakan untuk proses klasifikasi tutupan/penggunaan lahan. "\
+    "Untuk menggunakan modul ini, hasil dari modul 1 dan 2 harus sudah tersedia. Jika sudah terpenuhi, Anda dapat:"\
+    )
+st.markdown("1. Mengunggah data sampel training.")
+st.markdown("2. Membuat data sampel training melalui sampling on screen.")
+st.markdown("3. Menggunakan data sampel default Epistem.")
 
-st.sidebar.title("Tentang")
-st.sidebar.info("Modul ini dibuat untuk menentukan data sampel pelatihan.")
-st.sidebar.image("logos/logo_epistem.png")
+# Module description
+markdown = """
+Modul ini dibuat untuk menentukan data sampel training.
+"""
+
+# Set page layout and side info
+st.sidebar.title("About")
+st.sidebar.info(markdown)
+logo = "logos/logo_epistem.png"
+st.sidebar.image(logo)
 
 st.markdown("Ketersediaan keluaran hasil modul 1 dan 2")
 col1, col2, col3 = st.columns(3)

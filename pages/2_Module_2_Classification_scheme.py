@@ -21,6 +21,18 @@ st.set_page_config(
     layout="wide"
 )
 
+# Load custom CSS
+def load_css():
+    """Load custom CSS for EpistemX theme"""
+    try:
+        with open('.streamlit/style.css') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
+
+# Apply custom theme
+load_css()
+
 # Initialize session state for persistence
 def init_session_state():
     """Initialize session state variables for LULC scheme management."""
@@ -139,7 +151,7 @@ def render_manual_input_form():
     
     with col_btn1:
         button_text = "💾 Update Class" if manager.edit_mode else "➕ Add Class"
-        if st.button(button_text, type="primary", width = 'stretch'):
+        if st.button(button_text, type="primary", use_container_width=True):
             success, message = manager.add_class(class_id, class_name, color_code)
             if success:
                 st.session_state['ReferenceDataSource'] = False
@@ -150,7 +162,7 @@ def render_manual_input_form():
                 st.error(f"❌ {message}")
     
     with col_btn2:
-        if manager.edit_mode and st.button("❌ Cancel", width = 'stretch'):
+        if manager.edit_mode and st.button("❌ Cancel", use_container_width=True):
             manager.cancel_edit()
             sync_session_from_manager()  # Sync back to session state
             st.rerun()
@@ -264,7 +276,7 @@ with tab2:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            if st.button("✅ Finalize Scheme", type="primary", width = 'stretch'):
+            if st.button("✅ Finalize Scheme", type="primary", use_container_width=True):
                 success, message = manager.finalize_csv_upload(color_assignments)
                 if success:
                     sync_session_from_manager()  # Sync back to session state
@@ -274,7 +286,7 @@ with tab2:
                     st.error(f"❌ {message}")
         
         with col2:
-            if st.button("❌ Cancel Upload", width = 'stretch'):
+            if st.button("❌ Cancel Upload", use_container_width=True):
                 manager.csv_temp_classes = []
                 sync_session_from_manager()  # Sync back to session state
                 st.rerun()
@@ -300,7 +312,7 @@ with tab3:
             preview_df = pd.DataFrame(default_schemes[selected_scheme])
             st.dataframe(preview_df, use_container_width=True)
     
-    if st.button("📋 Load Default Scheme", type="primary", width = 'stretch'):
+    if st.button("📋 Load Default Scheme", type="primary", use_container_width=True):
         sync_manager_from_session()  # Sync current state
         success, message = manager.load_default_scheme(selected_scheme)
         if success:
@@ -378,7 +390,7 @@ def render_class_display():
                 file_name="classification_scheme.csv",
                 mime="text/csv",
                 type="primary",
-                width = 'stretch'
+                use_container_width=True
             )
     
     with col2:
@@ -422,17 +434,17 @@ def render_navigation():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Back to Module 1", width = 'stretch'):
+        if st.button("⬅️ Back to Module 1", use_container_width=True):
             st.switch_page("pages/1_Module_1_Generate_Image_Mosaic.py")
     
     with col2:
         if module_completed:
             if st.button("➡️ Go to Module 3: Training data generation", 
-                        type="primary", width = 'stretch'):
+                        type="primary", use_container_width=True):
                 st.switch_page("pages/3_Module_3_Generate_ROI.py")
         else:
             st.button("🔒 Complete Module 2 First", 
-                     disabled=True, width = 'stretch',
+                     disabled=True, use_container_width=True,
                      help="Add at least one class to proceed")
     
     # Status indicator
