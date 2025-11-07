@@ -31,8 +31,13 @@ def Navbar():
         # About section
         st.markdown("### Tentang Wahana")
         st.info("""
-        Contoh kerja modul 1 dan 3 dari platform pemetaan tutupan lahan Epistem. Diadaptasi dari:
-        <https://github.com/opengeos/streamlit-map-template>
+        **Epistem-X** adalah wahana pemetaan tutupan dan penggunaan lahan berbasis citra satelit, 
+        yang dikembangkan untuk mendukung perencanaan bentang lahan dan solusi alami perubahan iklim.  
+        Aplikasi ini merupakan **implementasi Fase 1**, yang berfokus pada pengembangan prototipe awal 
+        yang mencakup seluruh alur kerja penting dalam pembuatan peta tutupan/penggunaan lahan.
+
+        Epistem-X dibangun menggunakan pustaka **Streamlit** dan **Google Earth Engine (GEE)** 
+        untuk menyediakan antarmuka analisis yang transparan, kolaboratif, dan mudah diakses oleh parapihak.
         """)
         
         # Logo
