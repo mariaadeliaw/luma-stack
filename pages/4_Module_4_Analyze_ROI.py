@@ -25,7 +25,7 @@ import os
 
 #Page configuration
 st.set_page_config(
-    page_title="Perform ROI Analysis", #visible in the browser
+    page_title="Epistem-X Modul 4", #visible in the browser
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )

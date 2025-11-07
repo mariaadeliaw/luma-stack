@@ -17,7 +17,7 @@ from modules.nav import Navbar
 
 #Page configuration
 st.set_page_config(
-    page_title="Land Cover Classification Scheme",
+    page_title="Epistem-X Modul 2",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -82,23 +82,23 @@ sync_manager_from_session()
 Navbar()
 
 # Page header
-st.title("Determining LULC Classification Schema and Classes")
+st.title("Menentukan Skema Klasifikasi Peta Tutupan/Penggunaan Lahan")
 st.divider()
 
 st.markdown("""
-In this module, you need to define the classification scheme that you will be using to generate the land cover map.
-Three methods are supported in this platform:
-- **Manual Input**: Add classes one by one
-- **CSV Upload**: Import from existing classification file  
-- **Default Scheme**: Use predefined RESTORE+ project classes
+Dalam modul ini, Anda perlu menentukan skema klasifikasi yang akan digunakan untuk membuat peta tutupan lahan.  
+Terdapat tiga metode yang didukung dalam platform ini:
+- **Input Manual**: Tambahkan kelas satu per satu  
+- **Unggah CSV**: Impor dari berkas klasifikasi yang sudah ada  
+- **Skema Bawaan**: Gunakan kelas yang berdasarkan skema RESTORE+
 """)
 
 st.markdown("---")
 
 #Tab layout for different classification definition
-tab1, tab2, tab3 = st.tabs(["➕ Manual Input", "📤 Upload CSV", "📋 Default Scheme"])
+tab1, tab2, tab3 = st.tabs(["➕ Input Manual", "📤 Unggah CSV", "📋 Skema Bawaan"])
 
-#Createa function for manual input the class
+#Create a function for manual input the class
 def render_manual_input_form():
     """
     Render the manual class input form.
@@ -106,7 +106,7 @@ def render_manual_input_form():
     Creates input fields for class ID, name, and color, with support for
     both adding new classes and editing existing ones.
     """
-    st.markdown("#### Add a New Class")
+    st.markdown("#### Tambahkan sebuah kelas baru")
     #3 columns
     col1, col2, col3 = st.columns([1, 3, 2])
     
@@ -128,7 +128,7 @@ def render_manual_input_form():
     
     with col1:
         class_id = st.number_input(
-            "Class ID", 
+            "ID Kelas", 
             value=default_id, 
             min_value=1, 
             step=1,
@@ -137,15 +137,15 @@ def render_manual_input_form():
     
     with col2:
         class_name = st.text_input(
-            "Class Name", 
+            "Nama Kelas", 
             value=default_name,
-            placeholder="e.g., Forest, Settlement",
+            placeholder="e.g., Hutan, Pemukiman",
             key=f"{key_suffix}_class_name"
         )
     
     with col3:
         color_code = st.color_picker(
-            "Color Code", 
+            "Kode Warna", 
             value=default_color,
             key=f"{key_suffix}_color_code"
         )
@@ -154,7 +154,7 @@ def render_manual_input_form():
     col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 4])
     
     with col_btn1:
-        button_text = "💾 Update Class" if manager.edit_mode else "➕ Add Class"
+        button_text = "💾 Perbarui kelas" if manager.edit_mode else "➕ Tambahkan kelas"
         if st.button(button_text, type="primary", use_container_width=True):
             success, message = manager.add_class(class_id, class_name, color_code)
             if success:
@@ -166,7 +166,7 @@ def render_manual_input_form():
                 st.error(f"❌ {message}")
     
     with col_btn2:
-        if manager.edit_mode and st.button("❌ Cancel", use_container_width=True):
+        if manager.edit_mode and st.button("❌ Batalkan", use_container_width=True):
             manager.cancel_edit()
             sync_session_from_manager()  # Sync back to session state
             st.rerun()
@@ -177,17 +177,17 @@ with tab1:
 
 # Tab 2: Upload CSV
 with tab2:
-    st.markdown("#### Upload Classification Scheme")
+    st.markdown("#### Unggah Skema Klasifikasi")
     st.info("""
-    **CSV Requirements:**
-    - **ID column**: Numeric identifiers (e.g., 'ID', 'Class ID', 'Kode')
-    - **Name column**: Class names (e.g., 'Class Name', 'Kelas', 'Name')
-    - **Color column** (Optional): Hex color codes (e.g., 'Color', 'Color Code', 'Hex')
+    *Persyaratan berkas CSV:**
+    - **Kolom ID**: Pengenal numerik (misalnya: 'ID', 'Class ID', 'Kode')
+    - **Kolom Nama**: Nama kelas (misalnya: 'Class Name', 'Kelas', 'Name')
+    - **Kolom Warna** (Opsional): Kode warna heksadesimal (misalnya: 'Color', 'Color Code', 'Hex')
     
-    If no color column is detected, distinct colors will be automatically assigned.
+    Jika tidak ada kolom warna yang terdeteksi, warna yang berbeda akan ditetapkan secara otomatis.
     """)
     #Code to upload csv
-    uploaded_file = st.file_uploader("Choose a CSV file", type=['csv'])
+    uploaded_file = st.file_uploader("Pilih sebuah berkas CSV", type=['csv'])
 
     if uploaded_file is not None:
         try:
@@ -197,38 +197,38 @@ with tab2:
             #Auto-detect columns
             auto_id, auto_name, auto_color = manager.auto_detect_csv_columns(df)
             
-            st.markdown("### Select Columns")
+            st.markdown("### Pilih kolom")
             col1, col2, col3 = st.columns(3)
             #first column to select class ID's column
             with col1:
                 id_col = st.selectbox(
-                    "Select ID Column *", 
+                    "Pilih ID kolom *", 
                     df.columns, 
                     index=df.columns.get_loc(auto_id) if auto_id in df.columns else 0
                 )
             #second column to select class name's column
             with col2:
                 name_col = st.selectbox(
-                    "Select Class Name Column *", 
+                    "Pilih nama kolom kelas *", 
                     df.columns,
                     index=df.columns.get_loc(auto_name) if auto_name in df.columns else 0
                 )
             #new column for detecting color palette column
             with col3:
-                color_options = ["< No Color Column >"] + list(df.columns)
+                color_options = ["< Tidak ada kolom warna >"] + list(df.columns)
                 default_color_idx = 0
                 if auto_color and auto_color in df.columns:
                     default_color_idx = color_options.index(auto_color)
                 
                 color_col_selection = st.selectbox(
-                    "Select Color Column (Optional)",
+                    "Pilih kolom warna (Opsional)",
                     color_options,
                     index=default_color_idx
                 )
             #After selection, load the CSV
-            if st.button("📤 Load CSV Data", type="primary"):
+            if st.button("📤 Unggah berkas CSV", type="primary"):
                 sync_manager_from_session()  # Sync current state
-                color_col = None if color_col_selection == "< No Color Column >" else color_col_selection
+                color_col = None if color_col_selection == "< Tidak ada kolom warna >" else color_col_selection
                 success, message = manager.process_csv_upload(df, id_col, name_col, color_col)
                 if success:
                     st.session_state['ReferenceDataSource'] = False
@@ -248,14 +248,14 @@ with tab2:
                     st.error(f"❌ {message}")
                     
         except Exception as e:
-            st.error(f"Error reading CSV file: {str(e)}")
+            st.error(f"Berkas CSV error: {str(e)}")
 
     #Color assignment section (only show if no colors were auto-detected)
     sync_manager_from_session()  # Sync current state
     if manager.csv_temp_classes:
         st.markdown("---")
-        st.markdown("### Adjust Color for each class")
-        st.info("Color have been randomly generated. You can adjust them if needed.")
+        st.markdown("### Tentukan warna untuk tiap kelas")
+        st.info("Warna telah ditentukan secara acak. Anda dapat menyesuaikannya jika diperlukan.")
         
         color_assignments = []
         temp_classes = manager.csv_temp_classes
@@ -280,7 +280,7 @@ with tab2:
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            if st.button("✅ Finalize Scheme", type="primary", use_container_width=True):
+            if st.button("✅ Finalisasi Skema", type="primary", use_container_width=True):
                 success, message = manager.finalize_csv_upload(color_assignments)
                 if success:
                     sync_session_from_manager()  # Sync back to session state
@@ -290,15 +290,15 @@ with tab2:
                     st.error(f"❌ {message}")
         
         with col2:
-            if st.button("❌ Cancel Upload", use_container_width=True):
+            if st.button("❌ Batalkan unggah", use_container_width=True):
                 manager.csv_temp_classes = []
                 sync_session_from_manager()  # Sync back to session state
                 st.rerun()
 
 # Tab 3: Default Scheme
 with tab3:
-    st.markdown("#### Load Default Classification Scheme")
-    st.info("Quick start with predefined RESTORE+ project land cover classes")
+    st.markdown("####  Muat Skema Klasifikasi Bawaan")
+    st.info("Mulai dengan kelas tutupan/penggunaan lahan RESTORE+")
     
     if 'ReferenceDataSource' not in st.session_state:
         st.session_state.ReferenceDataSource = False
@@ -306,17 +306,17 @@ with tab3:
     default_schemes = manager.get_default_schemes()
     
     selected_scheme = st.selectbox(
-        "Select a default scheme:",
+        "Pilih skema bawaan:",
         options=list(default_schemes.keys())
     )
     
     # Preview the selected scheme
     if selected_scheme:
-        with st.expander("📋 Preview Classes"):
+        with st.expander("📋 Pratayang kelas"):
             preview_df = pd.DataFrame(default_schemes[selected_scheme])
             st.dataframe(preview_df, use_container_width=True)
     
-    if st.button("📋 Load Default Scheme", type="primary", use_container_width=True):
+    if st.button("📋 Muat skema bawaan", type="primary", use_container_width=True):
         sync_manager_from_session()  # Sync current state
         success, message = manager.load_default_scheme(selected_scheme)
         if success:
@@ -336,13 +336,13 @@ def render_class_display():
     edit/delete buttons, and download functionality.
     """
     st.markdown("---")
-    st.markdown("#### Current Classification Scheme")
+    st.markdown("#### Skema Klasifikasi Saat Ini")
 
     # Sync manager state
     sync_manager_from_session()
     
     if not manager.classes:
-        st.warning("⚠️ No classes defined yet. Add your first class above!")
+        st.warning("⚠️ Belum ada kelas yang ditentukan. Tambahkan kelas pertama Anda di atas!")
         return
 
     # Display classes in a clean table format
@@ -389,7 +389,7 @@ def render_class_display():
         csv_data = manager.get_csv_data()
         if csv_data:
             st.download_button(
-                label="📥 Download as CSV",
+                label="📥 Unduh sebagai berkas CSV",
                 data=csv_data,
                 file_name="classification_scheme.csv",
                 mime="text/csv",
@@ -398,7 +398,7 @@ def render_class_display():
             )
     
     with col2:
-        with st.expander("📋 Preview Data"):
+        with st.expander("📋 Prayatang berkas"):
             st.dataframe(manager.get_dataframe(), use_container_width=True)
 
 # Render the class display
@@ -438,24 +438,24 @@ def render_navigation():
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("⬅️ Back to Module 1", use_container_width=True):
+        if st.button("⬅️ Kembali ke modul 1", use_container_width=True):
             st.switch_page("pages/1_Module_1_Generate_Image_Mosaic.py")
     
     with col2:
         if module_completed:
-            if st.button("➡️ Go to Module 3: Training data generation", 
+            if st.button("➡️ Buka Modul 3: Penentuan data latih", 
                         type="primary", use_container_width=True):
                 st.switch_page("pages/3_Module_3_Generate_ROI.py")
         else:
-            st.button("🔒 Complete Module 2 First", 
+            st.button("🔒 Selesaikan modul 2 terlebih dahulu", 
                      disabled=True, use_container_width=True,
                      help="Add at least one class to proceed")
     
     # Status indicator
     if module_completed:
-        st.success(f"✅ Module completed with {manager.get_class_count()} classes")
+        st.success(f"✅ Modul 2 selesai dengan {manager.get_class_count()} kelas")
     else:
-        st.info("💡 Add at least one class to complete this module")
+        st.info("💡 Tambahkan setidaknya satu kelas untuk menyelesaikan modul ini")
 
 # Render navigation
 render_navigation()

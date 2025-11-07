@@ -22,7 +22,7 @@ import datetime
 import pandas as pd
 # Page configuration
 st.set_page_config(
-    page_title="Search Imagery Composite",
+    page_title="Epistem-X Modul 1",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -45,7 +45,7 @@ st.title("Cari dan Buat Gabungan Citra Satelit")
 st.divider()
 #module name
 markdown = """
-Modul ini memungkinkan pengguna untuk mencari dan menghasilkan gabungan citra satelit untuk area minat dan rentang waktu yang anda tentukan, menggunakan data katalog Google Earth Engine (GEE).
+Modul ini memungkinkan pengguna untuk mencari dan menghasilkan gabungan citra satelit untuk wilayah kajian dan rentang waktu yang anda tentukan, menggunakan data katalog Google Earth Engine (GEE).
 """
 # Add navigation sidebar
 Navbar()
@@ -107,7 +107,7 @@ def get_active_tasks():
 
 #Based on early experiments, shapefile with complex geometry often cause issues in GEE
 #User input, AOI upload
-st.subheader("Unggah Area Minat (Shapefile)")
+st.subheader("Unggah berkas wilayah kajian (Shapefile)")
 st.markdown("Saat ini, wahana hanya mendukung shapefile dalam format berkas .zip.")
 
 
@@ -150,23 +150,23 @@ if uploaded_file:
                 if gdf_cleaned is not None:
                     aoi = converter.convert_aoi_gdf(gdf_cleaned)
                     if aoi is not None:
-                        st.success("Area Minat berhasil diproses!")
+                        st.success("Wilayah kajian berhasil diproses!")
                         st.session_state.aoi = aoi
                         st.session_state.gdf = gdf_cleaned
                         
                         #Show a small preview map centered on AOI
-                        st.text("Area of interest preview:")
+                        st.text("Pratayang wilayah kajian:")
                         centroid = gdf_cleaned.geometry.centroid.iloc[0]
                         preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=7)
                         preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="AOI")
                         preview_map.to_streamlit(height=500)
                     else:
-                        st.error("Gagal memuat Area Minat ke server")
+                        st.error("Gagal memuat wilayah kajian ke server")
                 else:
-                    st.error("Validasi Geometri gagal.")
+                    st.error("Validasi geometri gagal.")
                     
             except Exception as e:
-                st.error(f"Error reading shapefile: {e}")
+                st.error(f"Gagal membaca shapefile: {e}")
                 st.info("Pastikan Shapefile Anda memuat semua berkas yang diperlukan (.shp, .shx, .dbf, .prj).")
 
 
@@ -177,31 +177,31 @@ st.subheader("Tentukan Kriteria Pencarian Citra")
 
 #Dump some information for supported imagery in the platform
 st.markdown("""
-Enter the acquisition date range, cloud cover percentage, and Landsat mission type. 
-Current platform support Landsat 1-3 at sensor radiance and Landsat 4-9 Collection 2 Surface Reflectance Analysis Ready Data (ARD), excluding the thermal bands.
-Spatial resolution for Landsat 1-3 is 60 m, while the rest of them have the spatial resolution of 30 m.
-Landsat mission avaliability is as follows:""")
-st.markdown("""
-1. Landsat 1 Multispectral Scanner/MSS (1972 - 1978)
-2. Landsat 2 Multispectral Scanner/MSS (1978 - 1982)
-3. Landsat 3 Multispectral Scanner/MSS (1978 - 1983)
-4. Landsat 4 Thematic Mapper/TM (1982 - 1993)
-5. Landsat 5 Thematic Mapper/TM (1984 - 2012)
-6. Landsat 7 Enhanced Thematic Mapper Plus/ETM+ (1999 - 2021)
-7. Landsat 8 Operational Land Imager/OLI (2013 - present)
-8. Landsat 9 Operational Land Imager-2/OLI-2 (2021 - present)
-""")
+Masukkan rentang tanggal perekaman, persentase tutupan awan, dan jenis misi Landsat.
+Platform saat ini mendukung Landsat 1–3 pada level radiansi sensor, serta Landsat 4–9 pada Data Reflektansi Permukaan (Surface Reflectance) Collection 2 yang sudah berstatus Analysis Ready Data (ARD), tidak termasuk kanal termal.
 
+Resolusi spasial untuk Landsat 1–3 adalah 60 meter, sedangkan seri lainnya memiliki resolusi 30 meter.
+Ketersediaan misi Landsat adalah sebagai berikut:""")
+st.markdown("""
+1. Landsat 1 — Multispectral Scanner (MSS), periode 1972–1978
+2. Landsat 2 — Multispectral Scanner (MSS), periode 1978–1982
+3. Landsat 3 — Multispectral Scanner (MSS), periode 1978–1983
+4. Landsat 4 — Thematic Mapper (TM), periode 1982–1993
+5. Landsat 5 — Thematic Mapper (TM), periode 1984–2012
+6. Landsat 7 — Enhanced Thematic Mapper Plus (ETM+), periode 1999–2021
+7. Landsat 8 — Operational Land Imager (OLI), periode 2013–sekarang
+8. Landsat 9 — Operational Land Imager-2 (OLI-2), periode 2021–sekarang
+""")
 #Date selection first - this will filter available sensors
 st.subheader("Pilih Periode Waktu")
-st.markdown("If 'select by year' is chosen, the system automatically searches imagery from January 1 until December 31")
+st.markdown("Jika opsi 'pilih berdasarkan tahun' dipilih, sistem akan secara otomatis mencari citra dari tanggal 1 Januari hingga 31 Desember.")
 date_mode = st.radio(
-    "Choose date selection mode:",
-    ["Select by year", "Custom date range"],
+    "Pilih mode penentuan tanggal:",
+    ["Pilih berdasarkan tahun", "Rentang tanggal pilihan sendiri"],
     index=0
 )
 
-if date_mode == "Select by year":
+if date_mode == "Pilih berdasarkan tahun":
     # Just year input
     years = list(range(1972, datetime.datetime.now().year + 1))
     years.reverse()  #Newest First
@@ -240,7 +240,7 @@ for sensor_name, sensor_info in sensor_dict.items():
         available_sensors[sensor_name] = sensor_info["code"]
 
 if not available_sensors:
-    st.warning(f"No Landsat sensors were operational in {selected_year}. Please select a different year.")
+    st.warning(f"Tidak ada sensor Landsat yang beroperasi pada tahun {selected_year}. Silakan pilih tahun lain.")
     st.stop()
 
 # Create sensor selection based on filtered options
@@ -253,7 +253,7 @@ elif "Landsat 7 ETM+" in sensor_names:
     default_index = sensor_names.index("Landsat 7 ETM+")
 
 selected_sensor_name = st.selectbox(
-    f"Select Landsat Sensor (Available for {selected_year}):", 
+    f"Pilih Sensor Landsat (Tersedia untuk tahun {selected_year}):", 
     sensor_names, 
     index=default_index
 )
@@ -265,7 +265,7 @@ cloud_cover = st.slider("Batas Maksimum Tutupan Awan (%):", 0, 100, 30)
 #=========3. Passing user input to backend codes ===========
 #What happend when the button is pres by the user
 if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is not None:
-    with st.spinner("Searching for Landsat imagery..."):
+    with st.spinner("Mencari citra Landsat..."):
         #first, search multispectral data (Collection 2 Tier 1, SR data)
 
         #(System Response 1.2: Search and Filter Imagery)
@@ -280,20 +280,25 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
             compute_detailed_stats=False
         )
         #Second, use the same parameter as multispectral data and use it to search collection 2 TOA data. Retrive thermal band only
-        thermal_data = optical_data.replace('_SR', '_TOA')  # match Landsat pair automatically
-        thermal_collection, meta = reflectance.get_thermal_bands(
-            aoi=aoi,
-            start_date=start_date,
-            end_date=end_date,
-            thermal_data=thermal_data,
-            cloud_cover=cloud_cover,
-            verbose=False,
-            compute_detailed_stats=False
-        )
+        #Skip thermal bands for Landsat 1-3 MSS (no thermal capability)
+        thermal_collection = None
+        if optical_data not in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
+            thermal_data = optical_data.replace('_SR', '_TOA')  # match Landsat pair automatically
+            thermal_collection, meta = reflectance.get_thermal_bands(
+                aoi=aoi,
+                start_date=start_date,
+                end_date=end_date,
+                thermal_data=thermal_data,
+                cloud_cover=cloud_cover,
+                verbose=False,
+                compute_detailed_stats=False
+            )
+        else:
+            st.info("ℹ️ Catatan: Sensor MSS pada Landsat 1–3 tidak memiliki kanal termal. Hanya kanal multispektral yang akan diproses.")
         #Get collection retrival statistic
         stats = Reflectance_Stats()
         detailed_stats = stats.get_collection_statistics(collection, compute_stats=True, print_report=True)
-        st.success(f"Found {detailed_stats['total_images']} images.")
+        st.success(f"Tersedia {detailed_stats['total_images']} grid lembar citra.")
 
         #Store the metadata for export
         st.session_state.search_metadata = {
@@ -305,7 +310,7 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
         try:
             coll_size = int(collection.size().getInfo())
         except Exception as e:
-            st.error(f"Failed to query collection size: {e}")
+            st.error(f"Gagal mengambil ukuran koleksi data: {e}")
             coll_size = 0
 
         if coll_size == 0:
@@ -324,16 +329,16 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
 #=========4. Displaying the result of the search===========
     #Display the search information as report
     summary_md = f"""
-    ### Landsat Imagery Search Summary
+    ### Ringkasan Pencarian Citra Landsat
 
-    - **Total Images Found:** {detailed_stats.get('total_images', 'N/A')}
-    - **Available Date Range:** {detailed_stats.get('date_range', 'N/A')}
+    - **Total Citra Ditemukan:** {detailed_stats.get('total_images', 'N/A')}
+    - **Rentang Tanggal Tersedia:** {detailed_stats.get('date_range', 'N/A')}
     """
     st.markdown(summary_md)
     #Path/Row information in expandable section
     path_row_tiles = detailed_stats.get('path_row_tiles', [])
     if path_row_tiles:
-        with st.expander(f"WRS Path/Row Coverage ({len(path_row_tiles)} tiles)"):
+        with st.expander(f"Cakupan WRS Path/Row Coverage ({len(path_row_tiles)} lembar citra)"):
             # Create columns for better display
             num_cols = 3
             cols = st.columns(num_cols)
@@ -343,7 +348,7 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
                 cols[col_idx].write(f" Path {path:03d} / Row {row:03d}")
 
     #Detailed Scene Information with cloud cover information
-    with st.expander("Scene ID, acquisition date, and cloud cover"):
+    with st.expander("ID Citra, Tanggal Perekaman, dan Tutupan Awan"):
         scene_ids = detailed_stats.get('Scene_ids', [])
         acquisition_dates = detailed_stats.get('individual_dates', [])
         cloud_covers = detailed_stats.get('cloud_cover', {}).get('values', [])
@@ -353,8 +358,8 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
             scene_df = pd.DataFrame({
                 '#': range(1, len(scene_ids) + 1),
                 'Scene ID': scene_ids,
-                'Acquisition Date': acquisition_dates,
-                'Cloud Cover (%)': [round(cc, 2) for cc in cloud_covers] if cloud_covers else ['N/A'] * len(scene_ids)
+                'Tanggal Perekaman': acquisition_dates,
+                'Tutupan Awan (%)': [round(cc, 2) for cc in cloud_covers] if cloud_covers else ['N/A'] * len(scene_ids)
             })
             
             #Display the table with formatting
@@ -365,9 +370,9 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
                 column_config={
                     '#': st.column_config.NumberColumn('#', width='small'),
                     'Scene ID': st.column_config.TextColumn('Scene ID', width='large'),
-                    'Acquisition Date': st.column_config.TextColumn('Acquisition Date', width='medium'),
-                    'Cloud Cover (%)': st.column_config.NumberColumn(
-                        'Cloud Cover (%)',
+                    'Tanggal Perekaman': st.column_config.TextColumn('Tanggal Perekaman', width='medium'),
+                    'Tutupan Awan (%)': st.column_config.NumberColumn(
+                        'Tutupan Awan (%)',
                         width='medium',
                         format="%.2f"
                     )
@@ -380,9 +385,9 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
                 with col1:
                     st.metric("Minimum", f"{min(cloud_covers):.2f}%")
                 with col2:
-                    st.metric("Average", f"{sum(cloud_covers)/len(cloud_covers):.2f}%")
+                    st.metric("Rata-rata", f"{sum(cloud_covers)/len(cloud_covers):.2f}%")
                 with col3:
-                    st.metric("Maximum", f"{max(cloud_covers):.2f}%")
+                    st.metric("Maksimum", f"{max(cloud_covers):.2f}%")
             
             #Download button
             csv = scene_df.to_csv(index=False).encode('utf-8')
@@ -403,16 +408,31 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
             'max': 300,
             'gamma': 0.4
         }
-        vis_params = {
-            'min': 0,
-            'max': 0.4,
-            'gamma': [0.5, 0.9, 1],
-            'bands':['NIR', 'RED', 'GREEN']
-        }
-        #Create and image composite/mosaic for thermal bands
-        thermal_median = thermal_collection.median().clip(aoi)
-        #composite for multispectral data and stacked them with thermal bands. Also convert to float()
-        composite = collection.median().clip(aoi).addBands(thermal_median).toFloat()
+        # Set visualization parameters based on sensor type
+        if optical_data in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
+            # Landsat 1-3 MSS bands: GREEN, RED, NIR1, NIR2
+            vis_params = {
+                'min': 0,
+                'max': 255,  # MSS data is in DN values
+                'gamma': [0.8, 0.9, 1],
+                'bands': ['NIR1', 'RED', 'GREEN']
+            }
+        else:
+            # Landsat 4-9 Surface Reflectance
+            vis_params = {
+                'min': 0,
+                'max': 0.4,
+                'gamma': [0.5, 0.9, 1],
+                'bands': ['NIR', 'RED', 'GREEN']
+            }
+        #Create and image composite/mosaic for thermal bands (if available)
+        if thermal_collection is not None:
+            thermal_median = thermal_collection.median().clip(aoi)
+            #composite for multispectral data and stacked them with thermal bands. Also convert to float()
+            composite = collection.median().clip(aoi).addBands(thermal_median).toFloat()
+        else:
+            #For Landsat 1-3 MSS: no thermal bands available
+            composite = collection.median().clip(aoi).toFloat()
         # Store in session state for use in other modules
         st.session_state['composite'] = composite
         st.session_state['Image_metadata'] = detailed_stats
@@ -421,34 +441,79 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
         # Display the image using geemap
         centroid = gdf.geometry.centroid.iloc[0]
         m = geemap.Map(center=[centroid.y, centroid.x], zoom=6)
-        m.addLayer(thermal_median, thermal_vis, "Landsat Thermal Band" )
+        
+        # Add thermal layer only if available (not for Landsat 1-3 MSS)
+        if thermal_collection is not None:
+            m.addLayer(thermal_median, thermal_vis, "Landsat Thermal Band")
+        
         m.addLayer(collection, vis_params, 'Landsat Collection', shown=True)
-        m.addLayer(composite, vis_params, 'Landsat Composite', shown= True)
-        m.add_geojson(gdf.__geo_interface__, layer_name="AOI", shown = False)
+        m.addLayer(composite, vis_params, 'Landsat Composite', shown=True)
+        m.add_geojson(gdf.__geo_interface__, layer_name="AOI", shown=False)
         m.to_streamlit(height=600)   
 else:
-    st.info("Unggah Area Minat dan tentukan kriteria pencarian untuk memulai.")
+    st.info("Unggah Wilayah kajian dan tentukan kriteria pencarian untuk memulai.")
 
 #=========5. Exporting the image collection===========
 #check if the session state is not empty
 if st.session_state.composite is not None and st.session_state.aoi is not None:
-    st.subheader("Simpan Gabungan Citra ke Google Drive")
+    st.subheader("Simpan Gabungan Citra")
+    
+    # Export destination selection
+    export_destination = st.radio(
+        "Pilih tujuan ekspor:",
+        ["Google Drive", "Google Cloud Storage"],
+        index=0,
+        help="Pilih lokasi untuk menyimpan hasil gabungan citra"
+    )
     #Create an export setting for the user to filled
-    with st.expander("Export Settings", expanded=True):
+    with st.expander("Pengaturan ekspor", expanded=True):
         col1 = st.columns(1)
         #File Naming
         default_name = f"Landsat_{st.session_state.search_metadata.get('sensor', 'unknown')}_{st.session_state.search_metadata.get('start_date', '')}_{st.session_state.search_metadata.get('end_date', '')}_mosaic"
         export_name = st.text_input(
-                "Export Filename:",
+                "Nama berkas ekspor:",
                 value=default_name,
                 help="Hasil akan disimpan dalam format GeoTIFF (.tif)"
             )
-        #Hardcoded folder location so that the export is in one location
-        #Located in My Drive/EPISTEM/EPISTEMX_Landsat_Export folder structure
-        drive_folder = "EPISTEM/EPISTEMX_Landsat_Export"  
-        drive_url = "https://drive.google.com/drive/folders/1JKwqv3q3JyQnkIEuIqTQ2hlwPmM-FQaF?usp=sharing"
-       
-        st.info(f"Files will be exported to [EPISTEM/EPISTEMX_Landsat_Export folder]({drive_url})")
+        # Export destination specific settings
+        if export_destination == "Google Drive":
+            #Hardcoded folder location so that the export is in one location
+            #Located in My Drive/EPISTEM/EPISTEMX_Landsat_Export folder structure
+            drive_folder = "EPISTEM/EPISTEMX_Landsat_Export"  
+            drive_url = "https://drive.google.com/drive/folders/1JKwqv3q3JyQnkIEuIqTQ2hlwPmM-FQaF?usp=sharing"
+           
+            st.info(f"Berkas akan diekspor ke [EPISTEM/EPISTEMX_Landsat_Export folder]({drive_url})")
+        
+        else:  # Google Cloud Storage
+            st.subheader("Pengaturan Google Cloud Storage")
+            
+            # Nama GCS Bucket
+            gcs_bucket = st.text_input(
+                "Nama GCS Bucket:",
+                value="epistemx",
+                placeholder="epistemx",
+                help="Masukkan nama bucket Google Cloud Storage Anda"
+            )
+            
+            # Awalan jalur file GCS
+            gcs_path_prefix = st.text_input(
+                "Awalan Jalur File (opsional):",
+                value="landsat_exports/",
+                help="Awalan jalur opsional di dalam bucket (misal: 'landsat_exports/' atau 'data/imagery/')"
+            )
+            
+            # Email Akun Layanan (opsional - hanya untuk tampilan, sebagian disembunyikan)
+            service_account_email = st.text_input(
+                "Email Akun Layanan:",
+                value="epistemx@ee-xxx.iam.gserviceaccount.com",
+                placeholder="epistemx@ee-xxx.iam.gserviceaccount.com",
+                help="Email akun layanan untuk autentikasi (disetel secara terpisah)"
+            )
+            
+            if not gcs_bucket:
+                st.warning("⚠️ Nama GCS Bucket wajib diisi untuk ekspor ke Cloud Storage")
+            else:
+                st.info(f"Berkas akan diekspor ke: gs://{gcs_bucket}/{gcs_path_prefix}{export_name}.tif")
         #Coordinate Reference System (CRS)
         #User can define their own CRS using EPSG code, if not, used WGS 1984 as default option    
         crs_options = {
@@ -463,16 +528,16 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
             
         if crs_choice == 'Custom EPSG':
             custom_epsg = st.text_input(
-                "Enter EPSG Code:",
+                "Masukkan EPSG Code:",
                 value="4326",
-                help="Example: 32648 (UTM Zone 48N)"
+                help="Contoh: 32748 (UTM Zona 48S)"
                 )
             export_crs = f"EPSG:{custom_epsg}"
         else:
             export_crs = crs_options[crs_choice]
             #Define the scale/spatial resolution of the imagery
         scale = st.number_input(
-                "Pixel Size (meters):",
+                "Ukuran piksel (meter):",
                 min_value=10,
                 max_value=1000,
                 value=30,
@@ -480,9 +545,16 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
             )
         #Button to start export the composite
         #System Response 1.3: Imagery Download
-        if st.button("Start Export to Google Drive", type="primary"):
+        export_button_text = f"Mulai ekspor ke {export_destination}"
+        export_disabled = False
+        
+        # Disable button if GCS is selected but bucket name is missing
+        if export_destination == "Google Cloud Storage" and not gcs_bucket:
+            export_disabled = True
+            
+        if st.button(export_button_text, type="primary", disabled=export_disabled):
             try:
-                with st.spinner("Preparing export task..."):
+                with st.spinner("Menyiapkan tugas ekspor…"):
                     #Use the composite from session state
                     export_image = st.session_state.composite
                     
@@ -504,31 +576,53 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                         try:
                             export_region = aoi_obj.geometry()
                         except:
-                            raise ValueError(f"Cannot extract geometry from AOI object of type: {type(aoi_obj)}")
+                            raise ValueError(f"Tidak dapat mengekstrak geometri dari objek wilayah kajian bertipe: {type(aoi_obj)}")
                     
-                    #Summarize the export parameter from user input
-                    export_params = {
-                        "image": export_image,
-                        "description": export_name.replace(" ", "_"),  #Remove spaces from description
-                        "folder": drive_folder,
-                        "fileNamePrefix": export_name,
-                        "scale": scale,
-                        "crs": export_crs,
-                        "maxPixels": 1e13,
-                        "fileFormat": "GeoTIFF",
-                        "formatOptions": {"cloudOptimized": True},
-                        "region": export_region
-                    }
+                    # Configure export parameters based on destination
+                    if export_destination == "Google Drive":
+                        #Summarize the export parameter from user input for Google Drive
+                        export_params = {
+                            "image": export_image,
+                            "description": export_name.replace(" ", "_"),  #Remove spaces from description
+                            "folder": drive_folder,
+                            "fileNamePrefix": export_name,
+                            "scale": scale,
+                            "crs": export_crs,
+                            "maxPixels": 1e13,
+                            "fileFormat": "GeoTIFF",
+                            "formatOptions": {"cloudOptimized": True},
+                            "region": export_region
+                        }
+                        
+                        #Pass the parameters to earth engine export
+                        task = ee.batch.Export.image.toDrive(**export_params)
+                        
+                    else:  # Google Cloud Storage
+                        #Summarize the export parameter from user input for GCS
+                        export_params = {
+                            "image": export_image,
+                            "description": export_name.replace(" ", "_"),  #Remove spaces from description
+                            "bucket": gcs_bucket,
+                            "fileNamePrefix": f"{gcs_path_prefix}{export_name}",
+                            "scale": scale,
+                            "crs": export_crs,
+                            "maxPixels": 1e13,
+                            "fileFormat": "GeoTIFF",
+                            "formatOptions": {"cloudOptimized": True},
+                            "region": export_region
+                        }
+                        
+                        #Pass the parameters to earth engine export for Cloud Storage
+                        task = ee.batch.Export.image.toCloudStorage(**export_params)
                     
-                    #Pass the parameters to earth engine export
-                    task = ee.batch.Export.image.toDrive(**export_params)
                     task.start()
                     
                     #Store task info in session state for monitoring
                     task_info = {
                         'id': task.id,
                         'name': export_name,
-                        'folder': drive_folder,
+                        'destination': export_destination,
+                        'folder': drive_folder if export_destination == "Google Drive" else gcs_bucket,
                         'crs': export_crs,
                         'scale': scale,
                         'start_time': datetime.datetime.now(),
@@ -538,31 +632,45 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                     #Append to export tasks list
                     st.session_state.export_tasks.append(task_info)
                     #note, here the task is submitted, but not yet done
-                    st.success(f"✅ Export task '{export_name}' submitted successfully!")
-                    st.info(f"Task ID: {task.id}")
-                    st.markdown(f"""
-                    **Export Details:**
-                    - File location: My Drive/{drive_folder}/{export_name}.tif
-                    - CRS: {export_crs}
-                    - Resolution: {scale}m
+                    st.success(f"✅ Tugas ekspor '{export_name}' berhasil dikirim!")
+                    st.info(f"ID Tugas: {task.id}")
                     
-                    Check progress in the [Earth Engine Task Manager](https://code.earthengine.google.com/tasks) or use the task monitor below.
-                    """)
+                    # Tampilkan detail ekspor berdasarkan tujuan
+                    if export_destination == "Google Drive":
+                        st.markdown(f"""
+                        **Detail Ekspor:**
+                        - Tujuan: Google Drive
+                        - Lokasi berkas: My Drive/{drive_folder}/{export_name}.tif
+                        - CRS: {export_crs}
+                        - Resolusi: {scale}m
+                        
+                        Periksa progres di [Earth Engine Task Manager](https://code.earthengine.google.com/tasks) atau gunakan pemantau tugas di bawah ini.
+                        """)
+                    else:  # Google Cloud Storage
+                        st.markdown(f"""
+                        **Detail Ekspor:**
+                        - Tujuan: Google Cloud Storage
+                        - Lokasi berkas: gs://{gcs_bucket}/{gcs_path_prefix}{export_name}.tif
+                        - CRS: {export_crs}
+                        - Resolusi: {scale}m
+                        
+                        Periksa progres di [Earth Engine Task Manager](https://code.earthengine.google.com/tasks) atau gunakan pemantau tugas di bawah ini.
+                        """)
                     
             except Exception as e:
-                st.error(f"Export failed: {str(e)}")
+                st.error(f"Gagal mengekspor: {str(e)}")
                 st.info("Informasi Pemecahan Masalah:")
-                st.write(f"AOI type: {type(st.session_state.aoi)}")
-                st.write(f"Composite exists: {st.session_state.composite is not None}")
+                st.write(f"Jenis wilayah kajian: {type(st.session_state.aoi)}")
+                st.write(f"Komposit tersedia: {st.session_state.composite is not None}")
 
     #Earth Engine Export Task Monitor
     if st.session_state.export_tasks:
-        st.subheader("Monitor Ekspor Earth Engine")
+        st.subheader("Pantau Ekspor Earth Engine")
         
         # Manual refresh options with cache control
         col_refresh1, col_refresh2 = st.columns([1, 3])
         with col_refresh1:
-            if st.button("🔄 Segarkan Semua"):
+            if st.button("🔄 Refresh Semua"):
                 # Clear cache to force fresh data
                 st.session_state.task_cache.clear()
                 st.session_state.last_cache_update.clear()
@@ -572,7 +680,7 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
             # Show cache status
             active_tasks_count = len(get_active_tasks())
             total_tasks_count = len(st.session_state.export_tasks)
-            st.caption(f"Monitoring {active_tasks_count}/{total_tasks_count} active tasks | Manual refresh only")
+            st.caption(f"Pantau {active_tasks_count}/{total_tasks_count} tugas aktif | segarkan ulang manual")
         
         #Summary of active tasks using cached status
         running_tasks = 0
@@ -704,31 +812,31 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                         
                         if creation_ts:
                             creation_time = datetime.datetime.fromtimestamp(creation_ts / 1000)
-                            st.write(f"**Started:** {creation_time.strftime('%H:%M:%S')}")
+                            st.write(f"**Mulai:** {creation_time.strftime('%H:%M:%S')}")
                         else:
-                            st.write("**Started:** N/A")
+                            st.write("**Mulai:** N/A")
                         
                         if update_ts:
                             update_time = datetime.datetime.fromtimestamp(update_ts / 1000)
-                            st.write(f"**Updated:** {update_time.strftime('%H:%M:%S')}")
+                            st.write(f"**Waktu terkini:** {update_time.strftime('%H:%M:%S')}")
                         else:
-                            st.write("**Updated:** N/A")
+                            st.write("**Waktu terkini:** N/A")
                         
                         # Show total runtime for completed tasks
                         if state == 'COMPLETED' and creation_ts and update_ts:
                             total_runtime = (update_ts - creation_ts) / 1000 / 60  # minutes
                             if total_runtime > 60:
-                                st.caption(f"Total time: {total_runtime/60:.1f}h {total_runtime%60:.0f}m")
+                                st.caption(f"Total waktu: {total_runtime/60:.1f}jam {total_runtime%60:.0f}menit")
                             else:
-                                st.caption(f"Total time: {total_runtime:.0f} min")
+                                st.caption(f"Total waktu: {total_runtime:.0f} menit")
                         
                         # Show cache status
                         if task_info['id'] in st.session_state.last_cache_update:
                             cache_age = (datetime.datetime.now() - st.session_state.last_cache_update[task_info['id']]).seconds
                             if cache_age < 60:
-                                st.caption(f"📊 Data: {cache_age}s ago")
+                                st.caption(f"📊 Data: {cache_age}detik yang lalu")
                             else:
-                                st.caption(f"📊 Data: {cache_age//60}m ago")
+                                st.caption(f"📊 Data: {cache_age//60}menit yang lalu")
                     
                     # Show error message if failed
                     if state == 'FAILED' and 'error_message' in status:
@@ -736,18 +844,18 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                     
                     # Show completion details
                     if state == 'COMPLETED':
-                        st.success("✅ Export completed successfully!")
+                        st.success("✅ Ekspor berhasil!")
                         drive_url = "https://drive.google.com/drive/folders/1JKwqv3q3JyQnkIEuIqTQ2hlwPmM-FQaF?usp=sharing"
-                        st.success(f"File saved to: [EPISTEM/EPISTEMX_Landsat_Export Folder]({drive_url})")
+                        st.success(f"Berkas disimpan di: [EPISTEM/EPISTEMX_Landsat_Export Folder]({drive_url})")
                         
                         #Option to remove completed task from monitor
-                        if st.button(f"Remove from monitor", key=f"remove_{i}"):
+                        if st.button(f"Hapus dari pantauan", key=f"remove_{i}"):
                             st.session_state.export_tasks.pop(i)
                             st.rerun()
                 
                 except Exception as e:
-                    st.error(f"Failed to get task status: {str(e)}")
-                    st.write(f"Task ID: {task_info['id']}")
+                    st.error(f"Gagal memuat status tugas: {str(e)}")
+                    st.write(f"ID tugas: {task_info['id']}")
         
         # Clear all completed tasks button
         completed_tasks = []
@@ -760,7 +868,7 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                 pass
         
         if completed_tasks:
-            if st.button("🗑️ Hapus Semua Tugas Selesai"):
+            if st.button("🗑️ Hapus semua tugas yang selesai"):
                 st.session_state.export_tasks = [
                     task for task in st.session_state.export_tasks 
                     if task not in completed_tasks
@@ -775,5 +883,5 @@ if st.session_state.composite is not None:
     if st.button("Lanjut ke Modul 2: Tentukan Skema Klasifikasi"):
         st.switch_page("pages/2_Module_2_Classification_scheme.py")
 else:
-    st.button("🔒 Complete Module 1 First", disabled=True)
-    st.info("Buat Gabungan Citra terlebih dahulu sebelum melanjutkan.")
+    st.button("🔒 Selesaikan Modul 1 terlebih dahulu", disabled=True)
+    st.info("Buat gabungan citra terlebih dahulu sebelum melanjutkan.")

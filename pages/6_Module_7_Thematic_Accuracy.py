@@ -14,7 +14,7 @@ initialize_earth_engine()
 
 #Page configuration
 st.set_page_config(
-    page_title="Penilaian Akurasi Tematik",
+    page_title="Epistem-X Modul 7",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )

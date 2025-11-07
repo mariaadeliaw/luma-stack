@@ -22,7 +22,7 @@ import datetime
 
 #Page configuration
 st.set_page_config(
-    page_title="Supervised Classification",
+    page_title="Epistem-X Modul 6",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
