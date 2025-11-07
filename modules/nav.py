@@ -14,7 +14,7 @@ def Navbar():
                     label='Modul 2: Tentukan Skema Klasifikasi')
         
         st.page_link('pages/3_Module_3_Generate_ROI.py', 
-                    label='Modul 3: Buat Area Sampel')
+                    label='Modul 3: Penentuan Data Latih')
         
         st.page_link('pages/4_Module_4_Analyze_ROI.py', 
                     label='Modul 4: Analisis Area Sampel')
@@ -29,7 +29,7 @@ def Navbar():
         st.markdown("---")
         
         # About section
-        st.markdown("### Tentang")
+        st.markdown("### Tentang Wahana")
         st.info("""
         Contoh kerja modul 1 dan 3 dari platform pemetaan tutupan lahan Epistem. Diadaptasi dari:
         <https://github.com/opengeos/streamlit-map-template>
