@@ -390,7 +390,7 @@ class LULC_Scheme_Manager:
             # Clear temporary storage
             self.csv_temp_classes = []
             
-            return True, f"Classification scheme created with {len(self.classes)} classes"
+            return True, f"Skema klasifikasi berhasil dibuat dengan {len(self.classes)} kelas"
             
         except Exception as e:
             return False, f"Error finalizing CSV upload: {str(e)}"

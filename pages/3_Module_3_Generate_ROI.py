@@ -15,6 +15,13 @@ from epistemx.module_3 import InputCheck, SyncTrainData, LULCSamplingTool
 from epistemx.ee_config import initialize_earth_engine
 from modules.nav import Navbar
 
+#Page configuration
+st.set_page_config(
+    page_title="Epistem-X Modul 3",
+    page_icon="logos/logo_epistem_crop.png",
+    layout="wide"
+)
+
 # Initialize Earth Engine
 initialize_earth_engine()
 
@@ -50,18 +57,20 @@ def load_css():
 # Apply custom theme
 load_css()
 
-st.title("Penentuan Data Sampel Klasifikasi Tutupan/penggunaan lahan")
+
+
+st.title("Penentuan data latih klasifikasi peta tutupan/penggunaan lahan")
 st.divider()
 st.markdown("Modul ini memungkinkan Anda untuk menyiapkan dan menentukan data sampel yang digunakan untuk proses klasifikasi tutupan/penggunaan lahan. "\
     "Untuk menggunakan modul ini, hasil dari modul 1 dan 2 harus sudah tersedia. Jika sudah terpenuhi, Anda dapat:"\
     )
-st.markdown("1. Mengunggah data sampel training.")
-st.markdown("2. Membuat data sampel training melalui sampling on screen.")
-st.markdown("3. Menggunakan data sampel default Epistem.")
+st.markdown("1. Mengunggah data latih.")
+st.markdown("2. Membuat data latih melalui sampling on screen.")
+st.markdown("3. Menggunakan data latih bawaan Epistem.")
 
 # Module description
 markdown = """
-Modul ini dibuat untuk menentukan data sampel training.
+Modul ini dibuat untuk menentukan data latih.
 """
 
 # Add navigation sidebar
@@ -76,14 +85,14 @@ composite_available = 'composite' in st.session_state
 
 with col1:
     if aoi_available:
-        st.success("✅ Data AOI dari modul 1 tersedia")
+        st.success("✅ Data wilayah kajian dari modul 1 tersedia")
     else:
-        st.error("❌ Data AOI belum tersedia, silakan kunjungi modul 1.")
+        st.error("❌ Data wilayah kajian belum tersedia, silakan kunjungi modul 1.")
 
 with col2:
     if classification_available:
         class_count = len(st.session_state['classes'])
-        scheme_type = "Skema Default" if st.session_state.get('ReferenceDataSource', False) else "Skema Kustom"
+        scheme_type = "Skema bawaan" if st.session_state.get('ReferenceDataSource', False) else "Skema pilihan sendiri"
         st.success(f"✅ Data skema klasifikasi dari modul 2 tersedia ({scheme_type}) - {class_count} kelas")
     else:
         st.error("❌ Data skema klasifikasi belum tersedia, silakan kunjungi modul 2.")
@@ -115,18 +124,18 @@ st.divider()
 TrainField = 'LULC_Type'
 
 if reference_data_source:
-    st.info("🔄 Berdasarkan pilihan skema klasifikasi default di Modul 2, sistem akan menggunakan data sampel default Epistem.")
-    st.subheader("A. Gunakan data sampel default (Epistem)")
-    st.markdown("Data pelatihan akan dimuat dari dataset referensi RESTORE+ yang sesuai dengan skema klasifikasi yang dipilih.")
+    st.info("🔄 Berdasarkan pilihan skema klasifikasi default di Modul 2, sistem akan menggunakan data sampel bawaan Epistem.")
+    st.subheader("A. Gunakan data sampel bawaan (Epistem)")
+    st.markdown("Data latih akan dimuat dari dataset referensi RESTORE+ yang sesuai dengan skema klasifikasi yang dipilih.")
     
     TrainEePath = 'projects/ee-rg2icraf/assets/Indonesia_lulc_Sample'
     TrainField = 'kelas'
     
-    if st.button("Muat Data Pelatihan Referensi", type="primary"):
+    if st.button("Muat Data latih Referensi", type="primary"):
         # Reset flags to ensure preview shows after loading
         st.session_state['show_ref_summary'] = False
         try:
-            with st.spinner("Memuat dan memproses data pelatihan referensi..."):
+            with st.spinner("Memuat dan memproses data latih referensi..."):
                 if AOI_GDF is not None:
                     if AOI_GDF.crs != 'EPSG:4326':
                         AOI_GDF_wgs84 = AOI_GDF.to_crs('EPSG:4326')
@@ -150,17 +159,17 @@ if reference_data_source:
                         bounds[2] < 90 or bounds[2] > 145 or
                         bounds[1] < -15 or bounds[1] > 10 or
                         bounds[3] < -15 or bounds[3] > 10):
-                        st.warning("⚠️ AOI bounds appear to be outside Indonesia region")
-                        st.warning("Hal ini dapat menyebabkan masalah dalam memuat data pelatihan")
+                        st.warning("⚠️ Batas wilayah kajian tampaknya berada di luar wilayah Indonesia")
+                        st.warning("Hal ini dapat menyebabkan masalah dalam memuat data latih")
                     
                     area_deg2 = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
                     if area_deg2 > 10:
-                        st.warning(f"⚠️ AOI covers a very large area ({area_deg2:.2f} deg²)")
-                        st.warning("This might cause performance issues or timeouts")
+                        st.warning(f"⚠️ Wilayah kajian mencakup area yang sangat luas ({area_deg2:.2f} deg²)")
+                        st.warning("Hal ini dapat menimbulkan masalah kinerja atau batas waktu habis (timeout)")
                     
                     invalid_geoms = AOI_GDF_wgs84[~AOI_GDF_wgs84.geometry.is_valid]
                     if len(invalid_geoms) > 0:
-                        st.warning(f"⚠️ Found {len(invalid_geoms)} invalid geometries - attempting to fix...")
+                        st.warning(f"⚠️ Ditemukan {len(invalid_geoms)} geometri tidak valid - mencoba memperbaiki...")
                         AOI_GDF_wgs84.geometry = AOI_GDF_wgs84.geometry.buffer(0)
                 
                 TrainDataDict = {
@@ -188,7 +197,7 @@ if reference_data_source:
                         training_ee_path=TrainEePath
                     )
                 except Exception as load_error:
-                    st.error(f"❌ LoadTrainData failed: {str(load_error)}")
+                    st.error(f"❌ Gagal memuat data latih (LoadTrainData): {str(load_error)}")
                     TrainDataDict = {
                         'training_data': gpd.GeoDataFrame(columns=['kelas', 'geometry']),
                         'landcover_df': LULCTable,
@@ -214,13 +223,13 @@ if reference_data_source:
                         train_count = 0
                     
                     if train_count > 0:
-                        st.success(f"✅ Berhasil memuat {train_count} sampel pelatihan")
+                        st.success(f"✅ Berhasil memuat {train_count} sampel data latih")
                     else:
-                        st.warning("⚠️ Tidak ditemukan sampel pelatihan untuk AOI ini")
+                        st.warning("⚠️ Tidak ditemukan sampel data latih untuk wilayah kajian ini")
                         st.info("Hal ini dapat terjadi karena:")
-                        st.info("• AOI Anda tidak tumpang tindih dengan area cakupan data pelatihan")
-                        st.info("• Data pelatihan tidak memiliki sampel di wilayah spesifik Anda")
-                        st.info("• Geometri AOI bermasalah")
+                        st.info("• Wilayah kajian Anda tidak tumpang tindih dengan area cakupan data latih")
+                        st.info("• Data latih tidak memiliki sampel di wilayah spesifik Anda")
+                        st.info("• Geometri wilayah kajian bermasalah")
                         TrainDataDict = {
                             'training_data': gpd.GeoDataFrame(columns=['kelas', 'geometry']),
                             'landcover_df': TrainDataDict.get('landcover_df', LULCTable),
@@ -232,12 +241,12 @@ if reference_data_source:
                                 'invalid_classes': [],
                                 'outside_aoi': [],
                                 'insufficient_samples': [],
-                                'warnings': ['No training data found for this AOI']
+                                'warnings': ['Tidak ada data latih di dalam wilayah kajian']
                             }
                         }
                         train_count = 0
                 else:
-                    st.warning("⚠️ Tidak ada data pelatihan yang dikembalikan dari Earth Engine")
+                    st.warning("⚠️ Tidak ada data latih yang dikembalikan dari Earth Engine")
                     st.info("Hal ini dapat disebabkan oleh:")
                     st.info("• Masalah autentikasi Earth Engine")
                     st.info("• Masalah konektivitas jaringan")
@@ -259,11 +268,11 @@ if reference_data_source:
                     train_count = 0
                 
                 if train_count == 0:
-                    st.info("💡 **Saran untuk mendapatkan data pelatihan:**")
-                    st.info("1. **Coba AOI yang berbeda** - Gunakan AOI yang mencakup area dengan tipe tutupan lahan yang diketahui")
-                    st.info("2. **Gunakan Upload Data Sampel** - Unggah shapefile data pelatihan Anda sendiri")
-                    st.info("3. **Gunakan Sampling On Screen** - Buat sampel pelatihan secara manual di peta")
-                    st.info("4. **Periksa lokasi AOI** - Pastikan AOI Anda berada di dalam Indonesia dan memiliki geometri yang valid")
+                    st.info("💡 **Saran untuk mendapatkan data latih:**")
+                    st.info("1. **Coba wilayah kajian yang berbeda** - Gunakan wilayah kajian yang mencakup area dengan tipe tutupan lahan yang diketahui")
+                    st.info("2. **Gunakan Upload Data Sampel** - Unggah shapefile data latih Anda sendiri")
+                    st.info("3. **Gunakan Sampling On Screen** - Buat sampel latih secara manual di peta")
+                    st.info("4. **Periksa lokasi wilayah kajian** - Pastikan wilayah kajian Anda berada di dalam Indonesia dan memiliki geometri yang valid")
                 
                 if AOI_GDF is not None:
                     TrainDataDict['aoi_geometry'] = AOI_GDF
@@ -289,7 +298,7 @@ if reference_data_source:
                 progress.progress(60)
                 
                 # Filter by AOI
-                status_text.text("Langkah 4/5: Memfilter berdasarkan AOI...")
+                status_text.text("Langkah 4/5: Memfilter berdasarkan wilayah kajian...")
                 if TrainDataDict.get('training_data') is not None and AOI_GDF is not None:
                     TrainDataDict['aoi_geometry'] = AOI_GDF
                     TrainDataDict = SyncTrainData.FilterTrainAoi(TrainDataDict)
@@ -315,10 +324,10 @@ if reference_data_source:
                 st.session_state['reference_data_loaded'] = True
                 # Reset summary flag so preview shows again
                 st.session_state['show_ref_summary'] = False
-                st.success("Data pelatihan referensi berhasil dimuat dan diproses!")
+                st.success("Data latih referensi berhasil dimuat dan diproses!")
                 
         except Exception as e:
-            st.error(f"Error memuat data pelatihan referensi: {e}")
+            st.error(f"Error memuat data latih referensi: {e}")
     
     # Show preview of reference data whenever data is available (unless explicitly viewing summary)
     train_data_ref = st.session_state.get('train_data_final_ref')
@@ -327,15 +336,15 @@ if reference_data_source:
         not st.session_state.get('show_ref_summary', False)):
         
         st.divider()
-        st.subheader("Preview Data Pelatihan Referensi")
+        st.subheader("Pratayang Data latih Referensi")
         
         if True:  # Always show if we reach this point
-            st.markdown("**Preview data pelatihan (tabel):**")
+            st.markdown("**Pratayang data latih (tabel):**")
             # Show first 10 rows of the training data
             preview_df = train_data_ref.head(10)
             st.dataframe(preview_df, use_container_width=True)
             
-            st.markdown("**Preview data pelatihan (peta):**")
+            st.markdown("**Pratayang data latih (peta):**")
             import folium
             from streamlit_folium import st_folium
             
@@ -455,7 +464,7 @@ if reference_data_source:
             folium.LayerControl().add_to(m)
             
             # Display map (no returned objects to prevent reloads on interaction)
-            st_folium(m, width=None, height=500, key="ref_preview_map", returned_objects=[])
+            st_folium(m, width=None, height=500, key="ref_Pratayang_map", returned_objects=[])
             
             # Button to continue to summary
             st.divider()
@@ -464,15 +473,15 @@ if reference_data_source:
                 if st.button("📊 Lanjut ke Ringkasan Data", type="primary", width="stretch"):
                     st.session_state['show_ref_summary'] = True
             with col2:
-                st.info("Preview menampilkan maksimal 10 sampel pertama")
+                st.info("Pratayang menampilkan maksimal 10 sampel pertama")
         else:
-            st.warning("Tidak ada data pelatihan untuk ditampilkan dalam preview.")
+            st.warning("Tidak ada data latih untuk ditampilkan dalam pratayang.")
             if st.button("📊 Lanjut ke Ringkasan Data", type="primary"):
                 st.session_state['show_ref_summary'] = True
     
     if st.session_state.get('data_processed_ref', False) and st.session_state.get('show_ref_summary', False):
             st.divider()
-            st.subheader("B. Ringkasan Data Pelatihan")
+            st.subheader("B. Ringkasan Data latih")
             
             TrainDataDict = st.session_state.get('train_data_dict_ref', {})
             vr = TrainDataDict.get('validation_results', {})
@@ -484,12 +493,12 @@ if reference_data_source:
             with col2:
                 st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
             with col3:
-                st.metric("Titik Valid (dalam AOI)", vr.get('valid_points', 'N/A'))
+                st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
             with col4:
                 st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
             
             if 'table_df_ref' in st.session_state and st.session_state['table_df_ref'] is not None:
-                st.markdown("#### Distribusi Data Pelatihan")
+                st.markdown("#### Distribusi Data Latih")
                 
                 # Format percentage column
                 display_df = st.session_state['table_df_ref'].copy()
@@ -516,7 +525,7 @@ if reference_data_source:
             st.divider()
             col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
             with col_btn2:
-                if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_ref_data"):
+                if st.button("✅ Gunakan Data Latih Ini", type="primary", width="stretch", key="use_ref_data"):
                     train_data = st.session_state.get('train_data_final_ref')
                     total_samples = len(train_data) if train_data is not None else 0
                     st.session_state.update({
@@ -527,12 +536,12 @@ if reference_data_source:
                         'training_data_source': 'Referensi',
                         'training_data_count': total_samples
                     })
-                    st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Referensi)")
+                    st.success(f"Data latih berhasil ditetapkan! ({total_samples} sampel dari Referensi)")
             
 
 
 else:
-    st.subheader("Pilih Mode Pengumpulan Data Pelatihan")
+    st.subheader("Pilih Mode Pengumpulan Data Latih")
     if st.session_state.get('switch_to_tab2', False):
         st.session_state['switch_to_tab2'] = False
         st.session_state['active_tab'] = 1
@@ -583,7 +592,7 @@ else:
                         # Load and validate shapefile
                         import geopandas as gpd
                         gdf = gpd.read_file(shp_files[0])
-                        st.success("Data pelatihan berhasil dimuat!")
+                        st.success("Data latih berhasil dimuat!")
 
                         TrainField = st.selectbox(
                             "Pilih field yang berisi informasi nama kelas:",
@@ -595,10 +604,10 @@ else:
                             TrainField = None
                                                                                               
                         if TrainField and TrainField != "-- Pilih Field --":
-                            st.markdown("**Preview data pelatihan (tabel):**")
+                            st.markdown("**Pratayang data latih (tabel):**")
                             st.dataframe(gdf)
 
-                            st.markdown("**Preview data pelatihan (peta):**")
+                            st.markdown("**Pratayang data latih (peta):**")
                             import folium
                             from streamlit_folium import st_folium
                             
@@ -716,7 +725,7 @@ else:
                             # Display map (no returned objects to prevent reloads on interaction)
                             st_folium(m, width=None, height=400, key="preview_map", returned_objects=[])
                             
-                            if st.button("Proses Data Pelatihan", type="primary", key="process_uploaded_data"):
+                            if st.button("Proses Data Latih", type="primary", key="process_uploaded_data"):
                                 # Store the data first
                                 st.session_state['training_gdf'] = gdf
                                 st.session_state['training_class_field'] = TrainField
@@ -738,7 +747,7 @@ else:
                                 }
                                 
                                 try:
-                                    with st.spinner("Memproses data pelatihan..."):
+                                    with st.spinner("Memproses data latih..."):
                                         progress = st.progress(0)
                                         status_text = st.empty()
                                         
@@ -761,7 +770,7 @@ else:
                                         progress.progress(60)
                                         
                                         # Filter by AOI
-                                        status_text.text("Langkah 4/5: Memfilter berdasarkan AOI...")
+                                        status_text.text("Langkah 4/5: Memfilter berdasarkan wilayah kajian...")
                                         if TrainDataDict.get('training_data') is not None and AOI_GDF is not None:
                                             TrainDataDict['aoi_geometry'] = AOI_GDF
                                             TrainDataDict = SyncTrainData.FilterTrainAoi(TrainDataDict)
@@ -785,11 +794,11 @@ else:
                                         progress.progress(100)
                                         status_text.text("Pemrosesan selesai!")
                                         st.session_state['data_processed_upload'] = True
-                                        st.success("Data pelatihan berhasil diproses!")
+                                        st.success("Data latih berhasil diproses!")
                                         st.rerun()
                                         
                                 except Exception as e:
-                                    st.error(f"Error memproses data pelatihan: {e}")
+                                    st.error(f"Error memproses data latih: {e}")
                             
                     except Exception as e:
                         st.error(f"Error membaca shapefile: {e}")
@@ -798,7 +807,7 @@ else:
         
         if st.session_state.get('data_processed_upload', False):
             st.divider()
-            st.subheader("B. Ringkasan Data Pelatihan")
+            st.subheader("B. Ringkasan Data Latih")
             
             TrainDataDict = st.session_state.get('train_data_dict_upload', {})
             vr = TrainDataDict.get('validation_results', {})
@@ -810,12 +819,12 @@ else:
             with col2:
                 st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
             with col3:
-                st.metric("Titik Valid (dalam AOI)", vr.get('valid_points', 'N/A'))
+                st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
             with col4:
                 st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
             
             if 'table_df_upload' in st.session_state and st.session_state['table_df_upload'] is not None:
-                    st.markdown("#### Distribusi Data Pelatihan")
+                    st.markdown("#### Sebaran Data Latih")
                     
                     # Format percentage column
                     display_df = st.session_state['table_df_upload'].copy()
@@ -905,7 +914,7 @@ else:
                                 st.rerun()
                     
                     with col_right:
-                        if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", use_container_width=True, key="use_upload_data"):
+                        if st.button("✅ Gunakan Data latih Ini", type="primary", use_container_width=True, key="use_upload_data"):
                             train_data = st.session_state.get('train_data_final_upload')
                             total_samples = len(train_data) if train_data is not None else 0
                             st.session_state.update({
@@ -916,7 +925,7 @@ else:
                                 'training_data_source': 'Upload Shapefile',
                                 'training_data_count': total_samples
                             })
-                            st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Upload Shapefile)")
+                            st.success(f"Data latih berhasil ditetapkan! ({total_samples} sampel dari Upload Shapefile)")
                 
 
 
@@ -931,7 +940,7 @@ else:
                 st.session_state['uploaded_data_loaded_to_tab2'] = False
                 st.rerun()
         
-        st.info("Gunakan peta di bawah untuk mengumpulkan sampel pelatihan dengan menambahkan koordinat secara manual.")
+        st.info("Gunakan peta di bawah untuk mengumpulkan sampel latih dengan menambahkan koordinat secara manual.")
         
         # Live feature counter
         total_features = len(st.session_state.sampling_data['features'])
@@ -1002,7 +1011,7 @@ else:
                              style_function=lambda x: {'fillColor': 'transparent', 'color': '#FFD700', 'weight': 3, 'dashArray': '5, 5', 'fillOpacity': 0.1},
                              tooltip="Area of Interest").add_to(m)
             except Exception as e:
-                st.error(f"Error displaying AOI: {e}")
+                st.error(f"Error displaying wilayah kajian: {e}")
 
         # Add confirmed features to map (only saved features, not drawn ones)
         feature_group = folium.FeatureGroup(name="LULC Features")
@@ -1091,7 +1100,7 @@ else:
             
             st.divider()
             st.markdown("**Visibilitas Layer:**")
-            st.session_state.show_aoi_layer = st.checkbox("Tampilkan Layer AOI", value=st.session_state.show_aoi_layer, disabled=AOI_GDF is None)
+            st.session_state.show_aoi_layer = st.checkbox("Tampilkan lembar wilayah kajian", value=st.session_state.show_aoi_layer, disabled=AOI_GDF is None)
             st.session_state.show_geotiff_layer = st.checkbox("Tampilkan Peta Dasar Kustom", value=st.session_state.show_geotiff_layer, disabled=st.session_state.geotiff_overlay is None)
             
             st.markdown("**Warna Kelas:**")
@@ -1259,7 +1268,7 @@ else:
 
         if st.session_state.sampling_data['features']:
             st.divider()
-            st.subheader("B. Pemrosesan & Validasi Data Pelatihan")
+            st.subheader("B. Pemrosesan & Validasi Data Latih")
             
             if st.button("Proses Sampel yang Dikumpulkan", type="primary", key="process_sampling_data"):
                 try:
@@ -1318,7 +1327,7 @@ else:
                     progress.progress(60)
                     
                     # Filter by AOI
-                    status_text.text("Langkah 4/5: Memfilter berdasarkan AOI...")
+                    status_text.text("Langkah 4/5: Memfilter berdasarkan wilayah kajian...")
                     if TrainDataDict.get('training_data') is not None and AOI_GDF is not None:
                         TrainDataDict['aoi_geometry'] = AOI_GDF
                         TrainDataDict = SyncTrainData.FilterTrainAoi(TrainDataDict)
@@ -1343,7 +1352,7 @@ else:
                     status_text.text("Pemrosesan selesai!")
                     st.session_state['data_processed_sampling'] = True
                     
-                    st.success(f"Berhasil memproses {len(train_data_gdf)} titik pelatihan dari sampling!")
+                    st.success(f"Berhasil memproses {len(train_data_gdf)} titik data latih dari sampling!")
                     st.rerun()
                     
                 except Exception as e:
@@ -1351,7 +1360,7 @@ else:
             
             if st.session_state.get('data_processed_sampling', False):
                 st.divider()
-                st.subheader("C. Ringkasan Data Pelatihan")
+                st.subheader("C. Ringkasan Data Latih")
                 
                 TrainDataDict = st.session_state.get('train_data_dict_sampling', {})
                 vr = TrainDataDict.get('validation_results', {})
@@ -1363,12 +1372,12 @@ else:
                 with col2:
                     st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
                 with col3:
-                    st.metric("Titik Valid (dalam AOI)", vr.get('valid_points', 'N/A'))
+                    st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
                 with col4:
                     st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
                 
                 if 'table_df_sampling' in st.session_state and st.session_state['table_df_sampling'] is not None:
-                    st.markdown("#### Distribusi Data Pelatihan")
+                    st.markdown("#### Sebaran Data Latih")
                     
                     # Format percentage column
                     display_df = st.session_state['table_df_sampling'].copy()
@@ -1395,7 +1404,7 @@ else:
                 st.divider()
                 col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
                 with col_btn2:
-                    if st.button("✅ Gunakan Data Pelatihan Ini", type="primary", width="stretch", key="use_sampling_data"):
+                    if st.button("✅ Gunakan Data Latih Ini", type="primary", width="stretch", key="use_sampling_data"):
                         train_data = st.session_state.get('train_data_final_sampling')
                         total_samples = len(train_data) if train_data is not None else 0
                         st.session_state.update({
@@ -1406,7 +1415,7 @@ else:
                             'training_data_source': 'Sampling On Screen',
                             'training_data_count': total_samples
                         })
-                        st.success(f"Data pelatihan berhasil ditetapkan! ({total_samples} sampel dari Sampling On Screen)")
+                        st.success(f"Data latih berhasil ditetapkan! ({total_samples} sampel dari Sampling On Screen)")
 
 
 
@@ -1426,12 +1435,12 @@ with col2:
         if st.button("➡️ Lanjut ke Modul 4: Analisis ROI", type="primary", width="stretch"):
             st.switch_page("pages/4_Module_4_Analyze_ROI.py")
     elif training_ready:
-        st.button("⚠️ Klik 'Gunakan Data' Dulu", disabled=True, width="stretch", help="Silakan klik tombol 'Gunakan Data Pelatihan Ini' untuk melanjutkan")
+        st.button("⚠️ Klik 'Gunakan Data' Dulu", disabled=True, width="stretch", help="Silakan klik tombol 'Gunakan Data Latih Ini' untuk melanjutkan")
     else:
-        st.button("🔒 Selesaikan Data Pelatihan Dulu", disabled=True, width="stretch", help="Silakan kumpulkan dan proses data pelatihan terlebih dahulu")
+        st.button("🔒 Selesaikan Data latih Dulu", disabled=True, width="stretch", help="Silakan kumpulkan dan proses data latih terlebih dahulu")
 
 # Show final status
 if training_ready and not st.session_state.get('training_data_finalized', False):
-    st.info("📋 Data pelatihan tersedia. Klik 'Gunakan Data Pelatihan Ini' untuk melanjutkan ke modul berikutnya.")
+    st.info("📋 Data latih tersedia. Klik 'Gunakan Data Latih Ini' untuk melanjutkan ke modul berikutnya.")
 elif not training_ready:
-    st.info("� Sitlakan kumpulkan data pelatihan menggunakan salah satu metode di atas.")
+    st.info("� Sitlakan kumpulkan data latih menggunakan salah satu metode di atas.")

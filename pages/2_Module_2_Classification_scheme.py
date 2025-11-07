@@ -17,7 +17,7 @@ from modules.nav import Navbar
 
 #Page configuration
 st.set_page_config(
-    page_title="Land Cover Classification Scheme",
+    page_title="Epistem-X Modul 2",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )

@@ -22,7 +22,7 @@ import datetime
 import pandas as pd
 # Page configuration
 st.set_page_config(
-    page_title="Search Imagery Composite",
+    page_title="Epistem-X Modul 1",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -45,7 +45,7 @@ st.title("Cari dan Buat Gabungan Citra Satelit")
 st.divider()
 #module name
 markdown = """
-Modul ini memungkinkan pengguna untuk mencari dan menghasilkan gabungan citra satelit untuk area minat dan rentang waktu yang anda tentukan, menggunakan data katalog Google Earth Engine (GEE).
+Modul ini memungkinkan pengguna untuk mencari dan menghasilkan gabungan citra satelit untuk wilayah kajian dan rentang waktu yang anda tentukan, menggunakan data katalog Google Earth Engine (GEE).
 """
 # Add navigation sidebar
 Navbar()
@@ -107,7 +107,7 @@ def get_active_tasks():
 
 #Based on early experiments, shapefile with complex geometry often cause issues in GEE
 #User input, AOI upload
-st.subheader("Unggah Area Minat (Shapefile)")
+st.subheader("Unggah berkas wilayah kajian (Shapefile)")
 st.markdown("Saat ini, wahana hanya mendukung shapefile dalam format berkas .zip.")
 
 
@@ -150,23 +150,23 @@ if uploaded_file:
                 if gdf_cleaned is not None:
                     aoi = converter.convert_aoi_gdf(gdf_cleaned)
                     if aoi is not None:
-                        st.success("Area Minat berhasil diproses!")
+                        st.success("Wilayah kajian berhasil diproses!")
                         st.session_state.aoi = aoi
                         st.session_state.gdf = gdf_cleaned
                         
                         #Show a small preview map centered on AOI
-                        st.text("Area of interest preview:")
+                        st.text("Pratayang wilayah kajian:")
                         centroid = gdf_cleaned.geometry.centroid.iloc[0]
                         preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=7)
                         preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="AOI")
                         preview_map.to_streamlit(height=500)
                     else:
-                        st.error("Gagal memuat Area Minat ke server")
+                        st.error("Gagal memuat wilayah kajian ke server")
                 else:
-                    st.error("Validasi Geometri gagal.")
+                    st.error("Validasi geometri gagal.")
                     
             except Exception as e:
-                st.error(f"Error reading shapefile: {e}")
+                st.error(f"Gagal membaca shapefile: {e}")
                 st.info("Pastikan Shapefile Anda memuat semua berkas yang diperlukan (.shp, .shx, .dbf, .prj).")
 
 
@@ -451,7 +451,7 @@ if st.button("Cari citra satelit", type="primary") and st.session_state.aoi is n
         m.add_geojson(gdf.__geo_interface__, layer_name="AOI", shown=False)
         m.to_streamlit(height=600)   
 else:
-    st.info("Unggah Area Minat dan tentukan kriteria pencarian untuk memulai.")
+    st.info("Unggah Wilayah kajian dan tentukan kriteria pencarian untuk memulai.")
 
 #=========5. Exporting the image collection===========
 #check if the session state is not empty
@@ -576,7 +576,7 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
                         try:
                             export_region = aoi_obj.geometry()
                         except:
-                            raise ValueError(f"Tidak dapat mengekstrak geometri dari objek AOI bertipe: {type(aoi_obj)}")
+                            raise ValueError(f"Tidak dapat mengekstrak geometri dari objek wilayah kajian bertipe: {type(aoi_obj)}")
                     
                     # Configure export parameters based on destination
                     if export_destination == "Google Drive":
@@ -660,7 +660,7 @@ if st.session_state.composite is not None and st.session_state.aoi is not None:
             except Exception as e:
                 st.error(f"Gagal mengekspor: {str(e)}")
                 st.info("Informasi Pemecahan Masalah:")
-                st.write(f"Jenis AOI: {type(st.session_state.aoi)}")
+                st.write(f"Jenis wilayah kajian: {type(st.session_state.aoi)}")
                 st.write(f"Komposit tersedia: {st.session_state.composite is not None}")
 
     #Earth Engine Export Task Monitor
