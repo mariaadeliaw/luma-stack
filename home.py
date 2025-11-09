@@ -5,8 +5,12 @@ from modules.nav import Navbar
 import os
 import tempfile
 
-st.set_page_config(layout="wide")
-
+# Page configuration
+st.set_page_config(
+    page_title="Beranda Epistem",
+    page_icon="logos/logo_epistem_crop.png",
+    layout="wide"
+)
 # Load custom CSS
 def load_css():
     """Load custom CSS for EpistemX theme"""

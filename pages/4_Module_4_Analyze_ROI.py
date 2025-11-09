@@ -73,11 +73,26 @@ if 'composite' in st.session_state:
     if st.checkbox("Pratinjau Gabungan Citra Satelit"):
         composite = st.session_state['composite']
         vis_params = st.session_state['visualization']
-        aoi = st.session_state['AOI']
-        centroid = aoi.geometry.centroid.iloc[0]
-        m = geemap.Map(center=[centroid.y, centroid.x], zoom=7)
+        aoi_ee = st.session_state['AOI']  # This is ee.Geometry
+        aoi_gdf = st.session_state.get('gdf')  # This is GeoDataFrame
+        
+        # Get centroid from GeoDataFrame if available, otherwise use default
+        if aoi_gdf is not None:
+            centroid = aoi_gdf.geometry.centroid.iloc[0]
+            center = [centroid.y, centroid.x]
+        else:
+            # Fallback to Indonesia center if GeoDataFrame not available
+            center = [-2.5, 118.0]
+        
+        m = geemap.Map(center=center, zoom=7)
         m.addLayer(composite, vis_params, "Landsat Mosaic")
-        m.addLayer(aoi, {}, "AOI", True, 0.5)
+        
+        # Add AOI layer - use GeoDataFrame if available, otherwise EE geometry
+        if aoi_gdf is not None:
+            m.add_geojson(aoi_gdf.__geo_interface__, layer_name="AOI")
+        else:
+            m.addLayer(aoi_ee, {}, "AOI", True, 0.5)
+        
         m.to_streamlit(height=600)
 else:
     st.warning("Gabungan Citra Satelit tidak ditemukan. Mohon jalankan Modul 1 terlebih dahulu.")

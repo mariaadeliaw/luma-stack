@@ -504,11 +504,11 @@ if reference_data_source:
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Titik Dimuat", vr.get('total_points', 'N/A'))
+                st.metric("Total Sampel Dimuat", vr.get('total_points', 'N/A'))
             with col2:
-                st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
+                st.metric("Sampel Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
             with col3:
-                st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
+                st.metric("Sampel Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
             with col4:
                 st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
             
@@ -880,11 +880,11 @@ else:
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.metric("Total Titik Dimuat", vr.get('total_points', 'N/A'))
+                st.metric("Total Sampel Dimuat", vr.get('total_points', 'N/A'))
             with col2:
-                st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
+                st.metric("Sampel Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
             with col3:
-                st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
+                st.metric("Sampel Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
             with col4:
                 st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
             
@@ -1515,7 +1515,7 @@ else:
                     status_text.text("Pemrosesan selesai!")
                     st.session_state['data_processed_sampling'] = True
                     
-                    st.success(f"Berhasil memproses {len(train_data_gdf)} titik data latih dari sampling!")
+                    st.success(f"Berhasil memproses {len(train_data_gdf)} sampel data latih dari sampling!")
                     st.rerun()
                     
                 except Exception as e:
@@ -1531,11 +1531,11 @@ else:
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("Total Titik Dimuat", vr.get('total_points', 'N/A'))
+                    st.metric("Total Sampel Dimuat", vr.get('total_points', 'N/A'))
                 with col2:
-                    st.metric("Titik Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
+                    st.metric("Sampel Setelah Filter Kelas", vr.get('points_after_class_filter', 'N/A'))
                 with col3:
-                    st.metric("Titik Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
+                    st.metric("Sampel Valid (dalam wilayah kajian)", vr.get('valid_points', 'N/A'))
                 with col4:
                     st.metric("Kelas Invalid", len(vr.get('invalid_classes', [])))
                 
