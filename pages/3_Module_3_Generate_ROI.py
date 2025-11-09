@@ -1004,6 +1004,7 @@ else:
                                     elif 'LULC_Class' in train_data_standardized.columns:
                                         train_data_standardized['Class_Name'] = train_data_standardized['LULC_Class']
                                     else:
+                                        class_field = st.session_state.get('training_class_field', 'LULC_Type')
                                         if class_field in train_data_standardized.columns:
                                             train_data_standardized['Class_Name'] = train_data_standardized[class_field]
                                         else:
