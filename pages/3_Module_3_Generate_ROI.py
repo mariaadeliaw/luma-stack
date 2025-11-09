@@ -158,7 +158,7 @@ if reference_data_source:
                         bounds[1] < -15 or bounds[1] > 10 or
                         bounds[3] < -15 or bounds[3] > 10):
                         st.warning("⚠️ Batas wilayah kajian tampaknya berada di luar wilayah Indonesia")
-                        st.warning("Hal ini dapat menyebabkan masalah dalam memuat data pelatihan")
+                        st.warning("Hal ini dapat menyebabkan masalah dalam memuat data latih")
                     
                     # Calculate actual area in square kilometers
                     try:
@@ -357,9 +357,9 @@ if reference_data_source:
             preview_df = train_data_ref.head(10)
             st.dataframe(preview_df, use_container_width=True)
             
-            st.markdown("**Pratayang data pelatihan (peta):**")
+            st.markdown("**Pratayang data latih (peta):**")
             
-            with st.spinner("Memuat peta dan data pelatihan..."):
+            with st.spinner("Memuat peta dan data latih..."):
                 import folium
                 from streamlit_folium import st_folium
                 
@@ -488,7 +488,7 @@ if reference_data_source:
                 if st.button("📊 Lanjut ke Ringkasan Data", type="primary", width="stretch"):
                     st.session_state['show_ref_summary'] = True
             with col2:
-                st.info("Pratayang menampilkan sampel data pelatihan")
+                st.info("Pratayang menampilkan sampel data latih")
         else:
             st.warning("Tidak ada data latih untuk ditampilkan dalam pratayang.")
             if st.button("📊 Lanjut ke Ringkasan Data", type="primary"):
@@ -543,9 +543,34 @@ if reference_data_source:
                 if st.button("✅ Gunakan Data Latih Ini", type="primary", width="stretch", key="use_ref_data"):
                     train_data = st.session_state.get('train_data_final_ref')
                     total_samples = len(train_data) if train_data is not None else 0
+                    
+                    # Standardize column names for reference data
+                    if train_data is not None and len(train_data) > 0:
+                        train_data_standardized = train_data.copy()
+                        
+                        if 'LULC_ID' not in train_data_standardized.columns:
+                            if 'kelas' in train_data_standardized.columns:
+                                train_data_standardized['LULC_ID'] = train_data_standardized['kelas']
+                            elif 'ID' in train_data_standardized.columns:
+                                train_data_standardized['LULC_ID'] = train_data_standardized['ID']
+                        
+                        if 'Class_Name' not in train_data_standardized.columns:
+                            if 'LULC_Type' in train_data_standardized.columns:
+                                train_data_standardized['Class_Name'] = train_data_standardized['LULC_Type']
+                            elif 'LULC_Class' in train_data_standardized.columns:
+                                train_data_standardized['Class_Name'] = train_data_standardized['LULC_Class']
+                            else:
+                                id_to_name = dict(zip(LULCTable['ID'], LULCTable['LULC_Type']))
+                                train_data_standardized['Class_Name'] = train_data_standardized['LULC_ID'].map(id_to_name)
+                        
+                        essential_cols = ['LULC_ID', 'Class_Name', 'geometry']
+                        train_data_final = train_data_standardized[essential_cols].copy()
+                    else:
+                        train_data_final = train_data
+                    
                     st.session_state.update({
                         'train_data_dict': st.session_state.get('train_data_dict_ref'),
-                        'train_final': train_data,
+                        'train_final': train_data_final,
                         'valid_final': None,
                         'training_data_finalized': True,
                         'training_data_source': 'Referensi',
@@ -569,7 +594,7 @@ else:
         Silakan pilih salah satu mode di bawah untuk melanjutkan:
         
         **📤 Unggah Data Sampel**
-        - Unggah file shapefile (.zip) yang berisi data sampel pelatihan
+        - Unggah file shapefile (.zip) yang berisi data sampel latih
         - Cocok jika Anda sudah memiliki data sampel dari sumber lain
         
         **🎯 Sampling On Screen**
@@ -645,9 +670,9 @@ else:
                             st.markdown("**Pratayang data latih (tabel):**")
                             st.dataframe(gdf)
 
-                            st.markdown("**Pratayang data pelatihan (peta):**")
+                            st.markdown("**Pratayang data latih (peta):**")
                             
-                            with st.spinner("Memuat peta dan data pelatihan..."):
+                            with st.spinner("Memuat peta dan data latih..."):
                                 import folium
                                 from streamlit_folium import st_folium
                                 
@@ -957,9 +982,42 @@ else:
                         if st.button("✅ Gunakan Data latih Ini", type="primary", use_container_width=True, key="use_upload_data"):
                             train_data = st.session_state.get('train_data_final_upload')
                             total_samples = len(train_data) if train_data is not None else 0
+                            
+                            # Standardize column names for uploaded data
+                            if train_data is not None and len(train_data) > 0:
+                                train_data_standardized = train_data.copy()
+                                
+                                if 'LULC_ID' not in train_data_standardized.columns:
+                                    if 'kelas' in train_data_standardized.columns:
+                                        train_data_standardized['LULC_ID'] = train_data_standardized['kelas']
+                                    elif 'ID' in train_data_standardized.columns:
+                                        train_data_standardized['LULC_ID'] = train_data_standardized['ID']
+                                    else:
+                                        class_field = st.session_state.get('training_class_field', 'LULC_Type')
+                                        if class_field in train_data_standardized.columns:
+                                            name_to_id = dict(zip(LULCTable['LULC_Type'], LULCTable['ID']))
+                                            train_data_standardized['LULC_ID'] = train_data_standardized[class_field].map(name_to_id)
+                                
+                                if 'Class_Name' not in train_data_standardized.columns:
+                                    if 'LULC_Type' in train_data_standardized.columns:
+                                        train_data_standardized['Class_Name'] = train_data_standardized['LULC_Type']
+                                    elif 'LULC_Class' in train_data_standardized.columns:
+                                        train_data_standardized['Class_Name'] = train_data_standardized['LULC_Class']
+                                    else:
+                                        if class_field in train_data_standardized.columns:
+                                            train_data_standardized['Class_Name'] = train_data_standardized[class_field]
+                                        else:
+                                            id_to_name = dict(zip(LULCTable['ID'], LULCTable['LULC_Type']))
+                                            train_data_standardized['Class_Name'] = train_data_standardized['LULC_ID'].map(id_to_name)
+                                
+                                essential_cols = ['LULC_ID', 'Class_Name', 'geometry']
+                                train_data_final = train_data_standardized[essential_cols].copy()
+                            else:
+                                train_data_final = train_data
+                            
                             st.session_state.update({
                                 'train_data_dict': st.session_state.get('train_data_dict_upload'),
-                                'train_final': train_data,
+                                'train_final': train_data_final,
                                 'valid_final': None,
                                 'training_data_finalized': True,
                                 'training_data_source': 'Upload Shapefile',
@@ -1299,19 +1357,70 @@ else:
                 
                 with col_b:
                     if st.button("📥 Unduh Shapefile (.zip)", use_container_width=True):
-                        gdf_export = gpd.GeoDataFrame.from_features(st.session_state.sampling_data['features'], crs='EPSG:4326')
-                        with tempfile.TemporaryDirectory() as tmpdir:
-                            shp_path = os.path.join(tmpdir, 'export.shp')
-                            gdf_export.to_file(shp_path)
-                            zip_path = os.path.join(tmpdir, 'export.zip')
-                            with zipfile.ZipFile(zip_path, 'w') as zipf:
-                                for ext in ['.shp', '.shx', '.dbf', '.prj']:
-                                    file = shp_path.replace('.shp', ext)
-                                    if os.path.exists(file):
-                                        zipf.write(file, os.path.basename(file))
-                            with open(zip_path, 'rb') as f:
-                                zip_data = f.read()
-                        st.download_button("Unduh Shapefile (.zip)", data=zip_data, file_name="lulc_sampling.zip", mime="application/zip", use_container_width=True)
+                        try:
+                            import shapefile
+                            from shapely.geometry import shape as shapely_shape
+                            
+                            with tempfile.TemporaryDirectory() as tmpdir:
+                                shp_path = os.path.join(tmpdir, 'lulc_sampling')
+                                
+                                # Create shapefile writer
+                                w = shapefile.Writer(shp_path)
+                                
+                                # Define fields
+                                w.field('LULC_ID', 'N', decimal=0)
+                                w.field('LULC_Class', 'C', size=50)
+                                w.field('Class_Colr', 'C', size=20)
+                                w.field('feature_id', 'N', decimal=0)
+                                w.field('source', 'C', size=20)
+                                
+                                # Add records
+                                for feature in st.session_state.sampling_data['features']:
+                                    geom = shapely_shape(feature['geometry'])
+                                    props = feature.get('properties', {})
+                                    
+                                    # Add geometry
+                                    if geom.geom_type == 'Point':
+                                        w.point(geom.x, geom.y)
+                                    elif geom.geom_type == 'Polygon':
+                                        # Convert polygon to list of points
+                                        coords = list(geom.exterior.coords)
+                                        w.poly([coords])
+                                    
+                                    # Add attributes
+                                    w.record(
+                                        props.get('LULC_ID', 0),
+                                        props.get('LULC_Class', 'Unknown')[:50],
+                                        props.get('Class_Color', '#808080')[:20],
+                                        props.get('feature_id', props.get('id', 0)),
+                                        props.get('source', 'digitized')[:20]
+                                    )
+                                w.close()
+                                
+                                # Create .prj file for WGS84
+                                prj_content = 'GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]'
+                                with open(shp_path + '.prj', 'w') as prj_file:
+                                    prj_file.write(prj_content)
+                                
+                                # Create zip file
+                                zip_path = os.path.join(tmpdir, 'lulc_sampling.zip')
+                                with zipfile.ZipFile(zip_path, 'w') as zipf:
+                                    for ext in ['.shp', '.shx', '.dbf', '.prj']:
+                                        file_path = shp_path + ext
+                                        if os.path.exists(file_path):
+                                            zipf.write(file_path, os.path.basename(file_path))
+                                
+                                with open(zip_path, 'rb') as f:
+                                    zip_data = f.read()
+                                
+                                st.download_button("Unduh Shapefile (.zip)", data=zip_data, file_name="lulc_sampling.zip", mime="application/zip", use_container_width=True)
+                                st.success("✅ Shapefile berhasil dibuat!")
+                                
+                        except Exception as e:
+                            st.error(f"Error membuat shapefile: {e}")
+                            st.info("Coba unduh dalam format GeoJSON sebagai alternatif.")
+                            import traceback
+                            st.code(traceback.format_exc())
                 
             except Exception as e:
                 st.error(f"Error processing GeoJSON data: {e}")
@@ -1460,9 +1569,34 @@ else:
                     if st.button("✅ Gunakan Data Latih Ini", type="primary", width="stretch", key="use_sampling_data"):
                         train_data = st.session_state.get('train_data_final_sampling')
                         total_samples = len(train_data) if train_data is not None else 0
+                        
+                        # Standardize column names for sampling data
+                        if train_data is not None and len(train_data) > 0:
+                            train_data_standardized = train_data.copy()
+                            
+                            if 'LULC_ID' not in train_data_standardized.columns:
+                                if 'kelas' in train_data_standardized.columns:
+                                    train_data_standardized['LULC_ID'] = train_data_standardized['kelas']
+                                elif 'ID' in train_data_standardized.columns:
+                                    train_data_standardized['LULC_ID'] = train_data_standardized['ID']
+                            
+                            if 'Class_Name' not in train_data_standardized.columns:
+                                if 'LULC_Type' in train_data_standardized.columns:
+                                    train_data_standardized['Class_Name'] = train_data_standardized['LULC_Type']
+                                elif 'LULC_Class' in train_data_standardized.columns:
+                                    train_data_standardized['Class_Name'] = train_data_standardized['LULC_Class']
+                                else:
+                                    id_to_name = dict(zip(LULCTable['ID'], LULCTable['LULC_Type']))
+                                    train_data_standardized['Class_Name'] = train_data_standardized['LULC_ID'].map(id_to_name)
+                            
+                            essential_cols = ['LULC_ID', 'Class_Name', 'geometry']
+                            train_data_final = train_data_standardized[essential_cols].copy()
+                        else:
+                            train_data_final = train_data
+                        
                         st.session_state.update({
                             'train_data_dict': st.session_state.get('train_data_dict_sampling'),
-                            'train_final': train_data,
+                            'train_final': train_data_final,
                             'valid_final': None,
                             'training_data_finalized': True,
                             'training_data_source': 'Sampling On Screen',
