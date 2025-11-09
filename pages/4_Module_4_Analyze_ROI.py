@@ -25,7 +25,7 @@ import os
 
 #Page configuration
 st.set_page_config(
-    page_title="Epistem-X Modul 4", #visible in the browser
+    page_title="Epistem-X Modul 4",
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -82,90 +82,101 @@ if 'composite' in st.session_state:
 else:
     st.warning("Gabungan Citra Satelit tidak ditemukan. Mohon jalankan Modul 1 terlebih dahulu.")
     st.stop()
+
+st.markdown("Ketersediaan data latih dari modul 3")
+if 'train_final' in st.session_state:
+    st.success("Data latih tersedia!")
+
+else:
+    st.warning("Data latih tidak ditemukan. Mohon jalankan Modul 3 terlebih dahulu.")
+    st.stop()
+
 st.divider()
+
 #User input ROI upload
-st.subheader("A. Unggah Wilayah Kajian (Shapefile)")
-st.markdown("saat ini platform hanya mendukung shapefile dalam format .zip")
-uploaded_file = st.file_uploader("Unggah wilayah kajian dalam berkas zip (.zip)", type=["zip"])
-aoi = None
-#define AOI upload function
-if uploaded_file:
-    # Extract the uploaded zip file to a temporary directory
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # write uploaded bytes to disk (required before reading zip)
-        zip_path = os.path.join(tmpdir, "upload.zip")
-        with open(zip_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+# st.subheader("A. Unggah Wilayah Kajian (Shapefile)")
+# st.markdown("saat ini platform hanya mendukung shapefile dalam format .zip")
+# uploaded_file = st.file_uploader("Unggah wilayah kajian dalam berkas zip (.zip)", type=["zip"])
+# aoi = None
+# #define AOI upload function
+# if uploaded_file:
+#     # Extract the uploaded zip file to a temporary directory
+#     with tempfile.TemporaryDirectory() as tmpdir:
+#         # write uploaded bytes to disk (required before reading zip)
+#         zip_path = os.path.join(tmpdir, "upload.zip")
+#         with open(zip_path, "wb") as f:
+#             f.write(uploaded_file.getbuffer())
 
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(tmpdir)
+#         with zipfile.ZipFile(zip_path, "r") as zip_ref:
+#             zip_ref.extractall(tmpdir)
 
-        # Find the .shp file in the extracted files (walk subfolders)
-        shp_files = []
-        for root, _, files in os.walk(tmpdir):
-            for fname in files:
-                if fname.lower().endswith(".shp"):
-                    shp_files.append(os.path.join(root, fname))
+#         # Find the .shp file in the extracted files (walk subfolders)
+#         shp_files = []
+#         for root, _, files in os.walk(tmpdir):
+#             for fname in files:
+#                 if fname.lower().endswith(".shp"):
+#                     shp_files.append(os.path.join(root, fname))
 
-        if len(shp_files) == 0:
-            st.error("Shapefile tidak ditemukan dalam berkas zip yang diunggah.")
-        else:
-            try:
-                # Read the shapefile
-                gdf = gpd.read_file(shp_files[0])
-                st.success("Area Sampel berhasil dimuat!")
-                validate = shapefile_validator(verbose=False)
-                converter = EE_converter(verbose=False)
-                st.markdown("Pratinjau Tabel Area Sampel:")
-                st.write(gdf)
-                # Validate and fix geometry
-                gdf_cleaned = validate.validate_and_fix_geometry(gdf, geometry="mixed")
+#         if len(shp_files) == 0:
+#             st.error("Shapefile tidak ditemukan dalam berkas zip yang diunggah.")
+#         else:
+#             try:
+#                 # Read the shapefile
+#                 gdf = gpd.read_file(shp_files[0])
+#                 st.success("Area Sampel berhasil dimuat!")
+#                 validate = shapefile_validator(verbose=False)
+#                 converter = EE_converter(verbose=False)
+#                 st.markdown("Pratinjau Tabel Area Sampel:")
+#                 st.write(gdf)
+#                 # Validate and fix geometry
+#                 gdf_cleaned = validate.validate_and_fix_geometry(gdf, geometry="mixed")
                 
-                if gdf_cleaned is not None:
-                    # Convert to EE geometry safely
-                    aoi = converter.convert_roi_gdf(gdf_cleaned)
+#                 if gdf_cleaned is not None:
+#                     # Convert to EE geometry safely
+#                     aoi = converter.convert_roi_gdf(gdf_cleaned)
                     
-                    if aoi is not None:
-                        st.success("Data latih berhasil diproses!")
-                        # Show a small preview map centered on AOI
-                        # Store in session state
-                        st.session_state['training_data'] = aoi
-                        st.session_state['training_gdf'] = gdf_cleaned
-                        st.text("Sebaran data latih:")
-                        centroid = gdf_cleaned.geometry.centroid.iloc[0]
-                        preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=6)
-                        preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="AOI")
-                        preview_map.to_streamlit(height=600)
-                    else:
-                        st.error("Gagal mengubah data latih ke format Google Earth Engine.")
-                else:
-                    st.error("Validasi geometri data latih gagal.")
+#                     if aoi is not None:
+#                         st.success("Data latih berhasil diproses!")
+#                         # Show a small preview map centered on AOI
+#                         # Store in session state
+#                         st.session_state['train_final'] = aoi
+#                         st.session_state['training_gdf'] = gdf_cleaned
+#                         st.text("Sebaran data latih:")
+#                         centroid = gdf_cleaned.geometry.centroid.iloc[0]
+#                         preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=6)
+#                         preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="AOI")
+#                         preview_map.to_streamlit(height=600)
+#                     else:
+#                         st.error("Gagal mengubah data latih ke format Google Earth Engine.")
+#                 else:
+#                     st.error("Validasi geometri data latih gagal.")
                     
-            except Exception as e:
-                st.error(f"Terjadi kesalahan dalam membaca berkas shapefile: {e}")
-                st.info("Pastikan Shapefile Anda memuat semua berkas yang diperlukan (.shp, .shx, .dbf, .prj).")
-st.divider()
+#             except Exception as e:
+#                 st.error(f"Terjadi kesalahan dalam membaca berkas shapefile: {e}")
+#                 st.info("Pastikan Shapefile Anda memuat semua berkas yang diperlukan (.shp, .shx, .dbf, .prj).")
+# st.divider()
+
 #Training data separability analysis
-#Used the previously uploaded ROI
-if "training_gdf" in st.session_state:
-    gdf_cleaned = st.session_state["training_gdf"]
-    st.subheader("B. Lakukan Analisis Keterpisahan Sampel Data Latih")
-    st.markdown("Pilih kolom yang sesuai dari data latih Anda yang merujuk pada ID Kelas numerik dan Nama Kelas.")   
+if "train_final" in st.session_state:
+    gdf_cleaned = st.session_state["train_final"]
+
+    st.subheader("A. Lakukan Analisis Keterpisahan Sampel Data Latih")
     
-    #Dropdown for class_property (numeric IDs)
-    class_property = st.selectbox(
-        "Pilih kolom yang memuat ID Kelas numerik, (contoh: 1, 2, 3, 4, dst.):",
-        options=gdf_cleaned.columns.tolist(),
-        index=gdf_cleaned.columns.get_loc("CLASS_ID") if "CLASS_ID" in gdf_cleaned.columns else 0,
-        key="class_property"
-    )
-    #Dropdown for class_name_property (class names)
-    class_name_property = st.selectbox(
-        "Pilih kolom tabel atribut yang berisi nama kelas (contoh: Hutan, Badan Air, Permukiman, dll):",
-        options=gdf_cleaned.columns.tolist(),
-        index=gdf_cleaned.columns.get_loc("CLASS_NAME") if "CLASS_NAME" in gdf_cleaned.columns else 0,
-        key="class_name_property"
-    )
+    # Automatically use standardized column names from Module 3
+    class_property = "LULC_ID"
+    class_name_property = "Class_Name"
+    
+    # Verify that required columns exist
+    if class_property not in gdf_cleaned.columns:
+        st.error(f"❌ Kolom '{class_property}' tidak ditemukan dalam data latih.")
+        st.error("Pastikan Anda telah menyelesaikan Modul 3 dengan benar dan menggunakan tombol 'Gunakan Data Latih Ini'.")
+        st.stop()
+    
+    if class_name_property not in gdf_cleaned.columns:
+        st.error(f"❌ Kolom '{class_name_property}' tidak ditemukan dalam data latih.")
+        st.error("Pastikan Anda telah menyelesaikan Modul 3 dengan benar dan menggunakan tombol 'Gunakan Data Latih Ini'.")
+        st.stop()
+
     st.session_state["selected_class_property"] = class_property
     st.session_state["selected_class_name_property"] = class_name_property
 
@@ -188,7 +199,7 @@ if "training_gdf" in st.session_state:
 
     #Single command to complete the analysis
     if st.button("Jalankan Analisis Keterpisahan", type="primary", use_container_width=True):
-        if "training_data" not in st.session_state:
+        if "train_final" not in st.session_state:
             st.error("Mohon unggah Shapefile data latih yang benar terlebih dahulu.")
         else:
             try:
@@ -198,10 +209,30 @@ if "training_gdf" in st.session_state:
                 #Create progress bar
                 progress = st.progress(0)
                 status_text = st.empty()
+                status_text.text("Langkah 1/7: Memvalidasi geometri data latih...")
+                validate = shapefile_validator(verbose=False)
+                converter = EE_converter(verbose=False)
+                train_gdf = st.session_state["train_final"]
+                train_gdf_cleaned = validate.validate_and_fix_geometry(train_gdf, geometry="mixed")
+                
+                if train_gdf_cleaned is None or train_gdf_cleaned.empty:
+                    st.error("❌ Validasi geometri data latih gagal. Data tidak valid atau kosong.")
+                    st.stop()
+                progress.progress(10)
+                
+                status_text.text("Langkah 2/7: Mengonversi data latih ke format Earth Engine...")
+                train_ee = converter.convert_roi_gdf(train_gdf_cleaned)
+                
+                if train_ee is None:
+                    st.error("❌ Gagal mengonversi data latih ke format Google Earth Engine.")
+                    st.stop()
+                progress.progress(15)
+                st.session_state["train_final_ee"] = train_ee
+                
                 #Intialize analyzer
-                status_text.text("Langkah 1/5: Memulai proses analisis...")
+                status_text.text("Langkah 3/7: Memulai proses analisis...")
                 analyzer = sample_quality(
-                    training_data=st.session_state["training_data"],
+                    training_data=train_ee,
                     image=st.session_state["composite"],
                     class_property=class_prop,
                     region=st.session_state["AOI"],
@@ -210,15 +241,15 @@ if "training_gdf" in st.session_state:
                 st.session_state["analyzer"] = analyzer
                 st.session_state["analyzer_class_property"] = class_prop
                 st.session_state["analyzer_class_name_property"] = class_name_prop
-                progress.progress(20)
+                progress.progress(25)
                 #ROI statistics
-                status_text.text("Langkah 2/5: Menghitung statistik area sampel")
+                status_text.text("Langkah 4/7: Menghitung statistik area sampel")
                 sample_stats_df = analyzer.get_sample_stats_df()
                 st.session_state["sample_stats"] = sample_stats_df
                 progress.progress(40)
 
                 #Extract spectral values
-                status_text.text("Langkah 3/5: Mengekstrak nilai spektral dari berbagai kanal/band… Proses ini memakan waktu beberapa menit.")
+                status_text.text("Langkah 5/7: Mengekstrak nilai spektral dari berbagai kanal/band… Proses ini memakan waktu beberapa menit.")
                 try:
                     print(f"Debug: Akan mengekstrak nilai spektral dengan resolusi ={scale}, man jumlah maksimum piksel ={max_pixels}")
                     print(f"Debug: Properti kelas (class_property) yang digunakan ={analyzer.class_property}")
@@ -241,7 +272,7 @@ if "training_gdf" in st.session_state:
                         raise extract_error
 
                 #Compute pixel statistics
-                status_text.text("Langkah 4/5: Menghitung statistik piksel...")
+                status_text.text("Langkah 6/7: Menghitung statistik piksel...")
                 try:
                     print("Debug: Sedang memulai perhitungan statistik piksel")
                     pixel_stats_df = analyzer.get_sample_pixel_stats_df(pixel_extract)
@@ -254,7 +285,7 @@ if "training_gdf" in st.session_state:
                     traceback.print_exc()
                     raise stats_error
                 #Run separability analysis
-                status_text.text("Langkah 5/5: Menjalankan analisis keterpisahan…")
+                status_text.text("Langkah 7/7: Menjalankan analisis keterpisahan…")
                 separability_df = analyzer.get_separability_df(pixel_extract, method=method)
                 lowest_sep = analyzer.lowest_separability(pixel_extract, method=method)
                 summary_df = analyzer.sum_separability(pixel_extract)
@@ -272,7 +303,7 @@ if "training_gdf" in st.session_state:
     #display the result
 if st.session_state.get("analysis_complete", False):
     st.divider()
-    st.subheader("C. Hasil Analisis")
+    st.subheader("B. Hasil Analisis")
     st.markdown("""
     Analisis keterpisahan menghasilkan beberapa tabel:
     - **Statistik Wilayah Kajian:** 
@@ -341,7 +372,7 @@ if st.session_state.get("analysis_complete", False):
             st.write("Tidak ada data pasangan kelas yang rancu.")            
 
 st.divider()
-st.subheader("D. Visualisasi keterpisahan antar kelas dalam data latih")
+st.subheader("C. Visualisasi keterpisahan antar kelas dalam data latih")
 st.markdown("Anda dapat menampilkan keterpisahan antar kelas dalam data latih menggunakan beberapa plot, yaitu histogram, plot kotak (*box plot*), dan plot sebar (*scatter plot*). Ini memungkinkan pengguna untuk mengevaluasi sebaran tumpang tindih data antar kelas, yang berpotensi mengurangi akurasi proses klasifikasi di langkah selanjutnya.")
 if (st.session_state.get("analysis_complete", False) and 
     "pixel_extract" in st.session_state and

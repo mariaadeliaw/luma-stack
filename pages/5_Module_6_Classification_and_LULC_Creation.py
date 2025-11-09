@@ -79,13 +79,13 @@ with col1:
 
 #Check for training data from Module 3/4
 with col2:
-    if 'training_data' in st.session_state and st.session_state.training_data is not None:
+    if 'train_final' in st.session_state and st.session_state.train_final is not None:
         st.success("✅ Data sampel tersedia")
-        roi = st.session_state['training_data']
+        roi = st.session_state['train_final']
         
         # Display training data info if available
-        if 'training_gdf' in st.session_state:
-            gdf = st.session_state['training_gdf']
+        if 'train_final' in st.session_state:
+            gdf = st.session_state['train_final']
             with st.expander("Detail Data Pelatihan"):
                 st.write(f"**Total Features:** {len(gdf)}")
                 st.write(f"**Columns:** {', '.join(gdf.columns.tolist())}")
@@ -247,13 +247,34 @@ with tab1:
         #Spinner to show progress
         with st.spinner("Mengekstrak fitur dari citra..."):
             try:
+                if "train_final_ee" in st.session_state and st.session_state["train_final_ee"] is not None:
+                    roi_ee = st.session_state["train_final_ee"]
+                else:
+                    st.warning("⚠️ Data latih belum divalidasi. Melakukan validasi sekarang...")
+                    from epistemx.shapefile_utils import shapefile_validator, EE_converter
+                    
+                    validate = shapefile_validator(verbose=False)
+                    converter = EE_converter(verbose=False)
+                    train_gdf = st.session_state["train_final"]
+                    train_gdf_cleaned = validate.validate_and_fix_geometry(train_gdf, geometry="mixed")
+                    
+                    if train_gdf_cleaned is None or train_gdf_cleaned.empty:
+                        st.error("❌ Validasi geometri data latih gagal. Data tidak valid atau kosong.")
+                        st.stop()
+                    roi_ee = converter.convert_roi_gdf(train_gdf_cleaned)
+                    
+                    if roi_ee is None:
+                        st.error("❌ Gagal mengonversi data latih ke format Google Earth Engine.")
+                        st.stop()
+                    st.session_state["train_final_ee"] = roi_ee
+                    st.success("✅ Data latih berhasil divalidasi dan dikonversi ke format Earth Engine")
+                
                 #Use module 6 feature extraction class 
                 fe = FeatureExtraction()
                 #define the spliting function from the source code
                 if split_data:
-                    # Use Stratified Random Split
                     training_data, testing_data = fe.stratified_split(
-                        roi=roi,
+                        roi=roi_ee,
                         image=image,
                         class_prop=class_property,
                         pixel_size=pixel_size,
@@ -271,9 +292,8 @@ with tab1:
                         st.metric("Testing Samples", testing_data.size().getInfo())
                     st.success("✅ Ekstraksi fitur selesai!")
                 else:
-                    #Extract all features without splitting
                     training_data = image.sampleRegions(
-                        collection=roi,
+                        collection=roi_ee,
                         properties=[class_property],
                         scale=pixel_size,
                     )
@@ -923,10 +943,10 @@ with tab4:
                     palette = [class_info[cls]['color'] for cls in unique_classes]
                 
                 #if failed, use a default and or random color palette
-                elif 'training_gdf' in st.session_state and 'selected_class_property' in st.session_state:
+                elif 'train_final' in st.session_state and 'selected_class_property' in st.session_state:
                     class_prop = st.session_state['selected_class_property']
                     class_name_prop = st.session_state.get('selected_class_name_property', None)
-                    gdf = st.session_state['training_gdf']
+                    gdf = st.session_state['train_final']
                     unique_classes = sorted(gdf[class_prop].unique())
                     
                     # Create default color mapping if not from Module 2
@@ -1028,8 +1048,8 @@ with tab4:
                     st.markdown("---")
                     
                     # Create map
-                    if 'training_gdf' in st.session_state:
-                        gdf = st.session_state['training_gdf']
+                    if 'train_final' in st.session_state:
+                        gdf = st.session_state['train_final']
                         centroid = gdf.geometry.centroid.iloc[0]
                         Map = geemap.Map(center=[centroid.y, centroid.x], zoom=10)
                     else:
@@ -1040,10 +1060,10 @@ with tab4:
                     Map.addLayer(image, st.session_state.get('visualization', {}), 'Image Composite', False)
                     
                     # Add training data as overlay (optional)
-                    if 'training_gdf' in st.session_state:
+                    if 'train_final' in st.session_state:
                         try:
                             Map.add_geojson(
-                                st.session_state['training_gdf'].__geo_interface__, 
+                                st.session_state['train_final'].__geo_interface__, 
                                 layer_name="Training Data", 
                                 style={'color': 'yellow', 'weight': 2, 'fillOpacity': 0},
                                 shown=False
