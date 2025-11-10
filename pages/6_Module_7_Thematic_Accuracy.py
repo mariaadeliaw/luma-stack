@@ -9,7 +9,7 @@ import zipfile
 import os
 import geopandas as gpd
 import plotly.express as px
-from epistemx.ee_config import initialize_earth_engine
+from ui_helper import show_footer, show_header
 initialize_earth_engine()
 
 #Page configuration
@@ -30,7 +30,11 @@ def load_css():
 
 # Apply custom theme
 load_css()
+show_header()
 
+st.markdown("""
+<div class="breadcrumb">Modul 7 › Uji Akurasi Petamu</div>
+""", unsafe_allow_html=True)
 
 #Initialize accuracy assessment manager
 @st.cache_resource

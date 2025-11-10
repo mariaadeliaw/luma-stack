@@ -1,154 +1,419 @@
 /* EpistemX Custom Theme CSS */
 /* This file extends the Streamlit theme with additional brand colors */
 
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
+
 :root {
-    /* ===== Brand Primary ===== */
-    --brand-primary: #EC1776;        /* Red Pink */
-    --brand-secondary: #FAF9FB;      /* Optional softer variant */
-    
-    /* ===== Accent Colours ===== */
-    --success-color: #FFD800;        /* Yellow */
-    --warning-color: #F46A43;        /* Red */
-    --info-color: #6E72FF;           /* Blue */
-    
-    /* ===== Neutrals / Grays ===== */
-    --base-color: #EEF1F3;           /* Neutral 500 */
-    --gray-light: #E3E6EF;           /* Neutral 700 */
-    --gray-dark: #444C51;            /* Gray 500 */
-    --background-dark: #222729;      /* Gray 800 (Dark Mode base) */
-    
-    /* ===== Brand Palette ===== */
-    --brand-red: #EC1776;
-    --brand-purple: #812FA8;
-    --brand-orange: #F49C33;
-    --brand-blue: #3E4AFF;
-    --brand-yellow: #FFD800;
-    --brand-neutral: #EEF1F3;
-    --brand-gray: #444C51;
+  --pink: #ec1776;
+  --purple: #812fa8;
+  --blue: #3e4aff;
+  --bg: #000000;
+  --text: #1e1e1e;
+  --card-bg: #ffffff;
+  --radius: 16px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
 }
 
-/* Custom button styling */
-.stButton > button {
-    background-color: var(--brand-primary);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    transition: all 0.3s ease;
+/* ===== Base ===== */
+html,
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
 }
 
-.stButton > button:hover {
-    background-color: var(--brand-purple);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(236, 23, 118, 0.3);
+.breadcrumb {
+  text-align: left;
+  opacity: 0.7;
+  margin-top: 8px;
+  font-size: 0.85em;
 }
 
-/* Success messages */
-.success-message {
-    background-color: var(--success-color);
-    color: var(--gray-dark);
-    padding: 12px;
-    border-radius: 8px;
-    border-left: 4px solid var(--brand-orange);
+/* ===== Sidebar Container ===== */
+section[data-testid="stSidebar"] {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.05);
+  padding: 0 !important; /* hilangkan padding default agar gambar bisa full */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* biar gambar nempel di bawah */
 }
 
-/* Warning messages */
-.warning-message {
-    background-color: var(--warning-color);
-    color: white;
-    padding: 12px;
-    border-radius: 8px;
-    border-left: 4px solid var(--brand-red);
+/* ===== Gambar di Sidebar ===== */
+section[data-testid="stSidebar"] img {
+  width: 100% !important; /* mentok kiri-kanan */
+  object-fit: cover !important; /* biar tetap proporsional, tapi penuh */
+  margin: 0 !important; /* hapus margin */
+  border-radius: 0 !important; /* biar benar-benar full */
 }
 
-/* Info messages */
-.info-message {
-    background-color: var(--info-color);
-    color: white;
-    padding: 12px;
-    border-radius: 8px;
-    border-left: 4px solid var(--brand-blue);
+/* ===== Tambahan supaya sidebar gak punya scroll bar ===== */
+section[data-testid="stSidebar"] > div {
+  overflow: hidden !important;
 }
 
-/* Custom metric cards */
-.metric-card {
-    background: linear-gradient(135deg, var(--brand-primary), var(--brand-purple));
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(236, 23, 118, 0.2);
-}
-
-/* Sidebar styling */
-.css-1d391kg {
-    background-color: var(--gray-light);
-}
-
-/* Header styling */
+/* ===== Header ===== */
 .main-header {
-    background: linear-gradient(90deg, var(--brand-primary), var(--brand-purple));
-    color: white;
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    text-align: center;
+  /* background: linear-gradient(90deg, var(--pink), var(--purple));
+  color: #fff; */
+  background: transparent;
+  color: linear-gradient(90deg, var(--pink), var(--purple));
+  text-align: center;
+  border-radius: var(--radius);
+  /* box-shadow: var(--shadow); */
+  margin-bottom: 0px;
+  padding: 32px;
 }
 
-/* Progress bars */
-.stProgress > div > div > div > div {
-    background-color: var(--brand-primary);
+.main-header h1 {
+  line-height: 1; /* rapetin tinggi baris */
+  margin-bottom: 0px;
+  margin-top: 0px; /* pastikan tidak ada jarak atas */
+  font-size: 4em;
+  padding-top: 0px;
+  background: linear-gradient(90deg, var(--pink), var(--purple), var(--blue));
+  background-size: 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientFlow 5s ease infinite;
 }
 
-/* Selectbox and input styling */
-.stSelectbox > div > div {
-    border-color: var(--brand-primary);
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.main-header h2 {
+  padding-bottom: 15px;
+  font-size: 1.5em;
+  letter-spacing: 0.3px;
+  line-height: 0.5; /* rapetin tinggi baris */
+  margin-bottom: 0px;
+  margin-top: 0; /* pastikan tidak ada jarak atas */
+}
+.main-header p {
+  margin: 8px auto 0; /* auto kiri-kanan = center */
+  font-size: 1.25em;
+  opacity: 0.9;
+  max-width: 100%; /* sepertiga lebar layar */
+  word-wrap: break-word;
+  text-align: center;
+  display: block; /* pastikan p diperlakukan sebagai blok */
 }
 
-.stTextInput > div > div > input:focus {
-    border-color: var(--brand-primary);
-    box-shadow: 0 0 0 2px rgba(236, 23, 118, 0.2);
+/* ===== EpistemX Card Section (Updated) ===== */
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Custom classes for components */
+.step,
 .epistemx-card {
-    background-color: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid var(--brand-primary);
-    margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeUp 0.8s ease forwards;
 }
 
-.epistemx-highlight {
-    background: linear-gradient(135deg, var(--brand-yellow), var(--brand-orange));
-    color: var(--gray-dark);
-    padding: 15px;
-    border-radius: 8px;
-    font-weight: 600;
+.step:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.step:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.step:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.step:nth-child(4) {
+  animation-delay: 0.55s;
+}
+.epistemx-card {
+  text-align: center;
+  padding: 30px 10px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); */
+  margin: 30px 0;
+  margin-top: 0;
+  transition: all 0.3s ease;
 }
 
-/* Module section headers */
+.epistemx-card h3 {
+  font-size: 1.5em;
+  margin-bottom: 25px;
+  color: var(--pink);
+  letter-spacing: 0.3px;
+}
+
+/* ===== Steps Grid - tighter and larger ===== */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px; /* sempitkan jarak antar step */
+  justify-items: center;
+  align-items: stretch;
+  padding: 0 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  transform: scale(1.25); /* efek skala global */
+}
+
+/* ===== Individual Step Cards ===== */
+.step {
+  background: #fff;
+  border-radius: 16px;
+  padding: 26px 20px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s ease;
+  text-align: left;
+  width: 100%;
+  max-width: 320px;
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.step strong {
+  display: block;
+  color: var(--purple);
+  font-size: 1.05em;
+  margin-bottom: 6px;
+}
+
+.step p {
+  font-size: 0.9em;
+  color: #444;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ===== Hover Effects (softer) ===== */
+.step:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(248, 248, 255, 0.96) 100%
+  );
+}
+
+.step:hover strong {
+  color: var(--pink);
+}
+
+/* ===== Module Header ===== */
 .module-header {
-    background: linear-gradient(45deg, var(--brand-blue), var(--info-color));
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0 10px 0;
-    font-size: 1.2em;
-    font-weight: 600;
+  display: inline-block; /* biar lebarnya mengikuti teks */
+  background: linear-gradient(45deg, var(--blue), var(--purple));
+  color: #fff;
+  padding: 12px 24px; /* beri ruang di kiri kanan */
+  border-radius: var(--radius);
+  font-weight: 600;
+  margin: 30px auto 15px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%); /* biar tetap center di tengah halaman */
 }
 
-/* Status indicators */
-.status-success {
-    color: var(--success-color);
-    font-weight: bold;
+/* ===== Buttons ===== */
+.stButton > button {
+  background: var(--pink);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(236, 23, 118, 0.3);
+}
+.stButton > button:hover {
+  background: var(--purple);
+  transform: translateY(-2px);
 }
 
-.status-warning {
-    color: var(--warning-color);
-    font-weight: bold;
+/* ===== Alerts ===== */
+.success-message {
+  background: #e8fff1;
+  border-left: 5px solid #3aa655;
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.warning-message {
+  background: #fff7ed;
+  border-left: 5px solid #f49c33;
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-.status-info {
-    color: var(--info-color);
-    font-weight: bold;
+/* ===== Map Wrapper ===== */
+iframe,
+.leaflet-container {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* ===== Scrollbar (optional aesthetic touch) ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--purple);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #eee;
+}
+
+/* ===== Inline Header ===== */
+/* .header-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 0 !important;
+} */
+
+/* ===== Footer ===== */
+/* .footer {
+  text-align: center;
+  color: #666;
+  font-size: 1em;
+  margin-top: 40px;
+  padding: 20px 0;
+  opacity: 1;
+}
+
+.footer strong {
+  color: var(--pink);
+}
+
+.footer-logo {
+  height: 100px;
+  width: auto;
+  display: block;
+  margin: 0 auto 10px auto;
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 40px 0 10px 0;
+} */
+
+/* ===== Footer Inline ===== */
+.footer {
+  /* position: fixed; */
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  padding: 10px 0;
+  text-align: center;
+  font-size: 0.9em;
+  color: #555;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  /* box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05); */
+  z-index: 999;
+}
+
+.footer-links {
+  margin-bottom: 20px;
+}
+
+.footer-links a {
+  color: #666;
+  text-decoration: none;
+  margin: 0 4px;
+  font-weight: 500;
+  transition: 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: var(--pink);
+}
+
+.footer-logo {
+  height: 70px;
+  width: auto;
+  display: block;
+  margin: 0 auto 10px auto;
+  margin-top: 20px;
+}
+
+.footer p {
+  margin-bottom: 5px;
+  font-size: 1em;
+}
+
+.check-item:hover .check-icon {
+  filter: brightness(1.3);
+  transform: scale(1.1);
+  transition: all 0.25s ease;
+}
+
+/* ===== Centered Main Layout ===== */
+.block-container {
+  max-width: 1080px;
+  margin: 0 auto !important;
+  padding-left: 2rem !important;
+  padding-right: 2rem !important;
+}
+
+footer,
+.footer {
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.block-container .steps {
+  position: relative;
+  z-index: 1;
+  margin-left: -6rem !important;
+  margin-right: -6rem !important;
+  width: calc(100% + 12rem) !important;
+  overflow: visible !important;
+}
+
+div[data-testid="stAlert"] {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+div[data-testid="stAlert"] > div:first-child {
+  text-align: center !important;
+  width: fit-content !important;
+  margin: 0 auto !important;
 }

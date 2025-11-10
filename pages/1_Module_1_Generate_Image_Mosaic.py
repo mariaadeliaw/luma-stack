@@ -20,6 +20,8 @@ import os
 import ee
 import datetime
 import pandas as pd
+from ui_helper import show_footer, show_header
+
 # Page configuration
 st.set_page_config(
     page_title="Epistem-X Modul 1",
@@ -39,9 +41,31 @@ def load_css():
 # Apply custom theme
 load_css()
 
+show_header()
+
+st.markdown("""
+<div class="breadcrumb">Module 1 › Buat Gabungan Citra</div>
+""", unsafe_allow_html=True)
+
 #=========Page requirements (title, description, session state)===========
 #title of the module
-st.title("Cari dan Buat Gabungan Citra Satelit")
+st.markdown("""
+<style>
+.gradient-title {
+  font-size: 2.5em;
+  font-weight: 700;
+  text-align: left;
+  background: linear-gradient(90deg, var(--pink), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.4em;
+}
+</style>
+
+<h1 class="gradient-title">Cari dan Buat Gabungan Citra Satelit</h1>
+""", unsafe_allow_html=True)
 st.divider()
 #module name
 markdown = """

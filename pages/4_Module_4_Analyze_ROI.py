@@ -22,10 +22,11 @@ import traceback
 import tempfile
 import zipfile
 import os
+from ui_helper import show_footer, show_header
 
 #Page configuration
 st.set_page_config(
-    page_title="Epistem-X Modul 4",
+    page_title="Epistem-X Modul 4", #visible in the browser
     page_icon="logos/logo_epistem_crop.png",
     layout="wide"
 )
@@ -41,9 +42,30 @@ def load_css():
 
 # Apply custom theme
 load_css()
+show_header()
+
+st.markdown("""
+<div class="breadcrumb">Modul 4 › Analisis Area Sampel</div>
+""", unsafe_allow_html=True)
 
 #title of the module
-st.title("Analisis Pemisahan Data Area Sampel (Region of Interest/ROI)")
+st.markdown("""
+<style>
+.gradient-title {
+  font-size: 2.5em;
+  font-weight: 700;
+  text-align: left;
+  background: linear-gradient(90deg, var(--pink), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.4em;
+}
+</style>
+
+<h1 class="gradient-title">Analisis Pemisahan Data Area Sampel (Region of Interest/ROI)</h1>
+""", unsafe_allow_html=True)
 st.divider()
 st.markdown("""Modul ini memungkinkan pengguna melakukan analisis keterpisahan antar kelas tutupan/penggunaan lahan di dalam wilayah analisis yang anda tentukan. 
 Sebelum melakukan analisis, pengguna harus mengunggah data referensi tiap-tiap kelas tutupan/penggunaan lahan yang sudah ditentukan dalam format yang kompatibel. 
@@ -54,7 +76,6 @@ st.markdown("2. Pilih parameter keterpisahan yang terdiri dari resolusi spasial 
 
 # Add navigation sidebar
 Navbar()
-
 st.markdown("Ketersediaan gabungan citra satelit dari modul 1")
 #Check if landsat data from module 1 is available
 if 'composite' in st.session_state:
@@ -107,70 +128,6 @@ else:
     st.stop()
 
 st.divider()
-
-#User input ROI upload
-# st.subheader("A. Unggah Wilayah Kajian (Shapefile)")
-# st.markdown("saat ini platform hanya mendukung shapefile dalam format .zip")
-# uploaded_file = st.file_uploader("Unggah wilayah kajian dalam berkas zip (.zip)", type=["zip"])
-# aoi = None
-# #define AOI upload function
-# if uploaded_file:
-#     # Extract the uploaded zip file to a temporary directory
-#     with tempfile.TemporaryDirectory() as tmpdir:
-#         # write uploaded bytes to disk (required before reading zip)
-#         zip_path = os.path.join(tmpdir, "upload.zip")
-#         with open(zip_path, "wb") as f:
-#             f.write(uploaded_file.getbuffer())
-
-#         with zipfile.ZipFile(zip_path, "r") as zip_ref:
-#             zip_ref.extractall(tmpdir)
-
-#         # Find the .shp file in the extracted files (walk subfolders)
-#         shp_files = []
-#         for root, _, files in os.walk(tmpdir):
-#             for fname in files:
-#                 if fname.lower().endswith(".shp"):
-#                     shp_files.append(os.path.join(root, fname))
-
-#         if len(shp_files) == 0:
-#             st.error("Shapefile tidak ditemukan dalam berkas zip yang diunggah.")
-#         else:
-#             try:
-#                 # Read the shapefile
-#                 gdf = gpd.read_file(shp_files[0])
-#                 st.success("Area Sampel berhasil dimuat!")
-#                 validate = shapefile_validator(verbose=False)
-#                 converter = EE_converter(verbose=False)
-#                 st.markdown("Pratinjau Tabel Area Sampel:")
-#                 st.write(gdf)
-#                 # Validate and fix geometry
-#                 gdf_cleaned = validate.validate_and_fix_geometry(gdf, geometry="mixed")
-                
-#                 if gdf_cleaned is not None:
-#                     # Convert to EE geometry safely
-#                     aoi = converter.convert_roi_gdf(gdf_cleaned)
-                    
-#                     if aoi is not None:
-#                         st.success("Data latih berhasil diproses!")
-#                         # Show a small preview map centered on AOI
-#                         # Store in session state
-#                         st.session_state['train_final'] = aoi
-#                         st.session_state['training_gdf'] = gdf_cleaned
-#                         st.text("Sebaran data latih:")
-#                         centroid = gdf_cleaned.geometry.centroid.iloc[0]
-#                         preview_map = geemap.Map(center=[centroid.y, centroid.x], zoom=6)
-#                         preview_map.add_geojson(gdf_cleaned.__geo_interface__, layer_name="AOI")
-#                         preview_map.to_streamlit(height=600)
-#                     else:
-#                         st.error("Gagal mengubah data latih ke format Google Earth Engine.")
-#                 else:
-#                     st.error("Validasi geometri data latih gagal.")
-                    
-#             except Exception as e:
-#                 st.error(f"Terjadi kesalahan dalam membaca berkas shapefile: {e}")
-#                 st.info("Pastikan Shapefile Anda memuat semua berkas yang diperlukan (.shp, .shx, .dbf, .prj).")
-# st.divider()
-
 #Training data separability analysis
 if "train_final" in st.session_state:
     gdf_cleaned = st.session_state["train_final"]

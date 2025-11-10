@@ -36,13 +36,13 @@ def Navbar():
         Aplikasi ini merupakan **implementasi Fase 1**, yang berfokus pada pengembangan prototipe awal 
         yang mencakup seluruh alur kerja penting dalam pembuatan peta tutupan/penggunaan lahan.
 
-        Epistem-X dibangun menggunakan pustaka **Streamlit** dan **Google Earth Engine (GEE)** 
+        **Epistem-X** dibangun menggunakan pustaka **Streamlit** dan **Google Earth Engine (GEE)** 
         untuk menyediakan antarmuka analisis yang transparan, kolaboratif, dan mudah diakses oleh parapihak.
         """)
         
         # Logo
-        logo = "logos/logo_epistem.png"
+        logo = "logos/artwork_sidebar.png"
         try:
-            st.image(logo)
+            st.sidebar.image(logo)
         except:
             pass  # Logo file not found, continue without it

@@ -14,6 +14,7 @@ import streamlit as st
 import pandas as pd
 from epistemx.module_2 import LULC_Scheme_Manager
 from modules.nav import Navbar
+from ui_helper import show_footer, show_header
 
 #Page configuration
 st.set_page_config(
@@ -33,6 +34,12 @@ def load_css():
 
 # Apply custom theme
 load_css()
+
+show_header()
+
+st.markdown("""
+<div class="breadcrumb">Modul 2 › Tentukan Skema Klasifikasi</div>
+""", unsafe_allow_html=True)
 
 # Initialize session state for persistence
 def init_session_state():

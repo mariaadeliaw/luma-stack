@@ -4,13 +4,10 @@ from epistemx import auto_initialize
 from modules.nav import Navbar
 import os
 import tempfile
+from ui_helper import show_footer, show_header
 
-# Page configuration
-st.set_page_config(
-    page_title="Beranda Epistem",
-    page_icon="logos/logo_epistem_crop.png",
-    layout="wide"
-)
+st.set_page_config(layout="wide")
+
 # Load custom CSS
 def load_css():
     """Load custom CSS for EpistemX theme"""
@@ -22,6 +19,8 @@ def load_css():
 
 # Apply custom theme
 load_css()
+# Show header
+show_header()
 
 # Set up temporary directory for leafmap
 if not os.path.exists('/tmp'):
@@ -44,18 +43,11 @@ if 'ee_initialized' not in st.session_state:
 # Add navigation sidebar
 Navbar()
 
-# Customize page title with branded header
 st.markdown("""
 <div class="main-header">
-    <h1>🛰️ Platform Pemetaan Tutupan Lahan EpistemX</h1>
-    <p>Pemrosesan & Analisis Data Observasi Bumi Lanjutan</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-<div class="epistemx-card">
-    <h3>🌍 Selamat Datang di EpistemX</h3>
-    <p>Platform multi-halaman ini mendemonstrasikan kemampuan pemetaan tutupan lahan EpistemX yang canggih, 
+    <h2>Selamat Datang di</h2>
+    <h1>Platform Pemetaan Tutupan Lahan<br>EpistemX</h1>
+    <p>Pemrosesan & Analisis Data Observasi Bumi Lanjutan.<br>Platform multi-halaman ini mendemonstrasikan kemampuan pemetaan tutupan lahan EpistemX yang canggih, 
     dengan fitur pemrosesan citra Landsat otomatis untuk area minat Anda.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -64,13 +56,24 @@ st.markdown('<div class="module-header">📋 Instruksi</div>', unsafe_allow_html
 
 st.markdown("""
 <div class="epistemx-card">
-    <h4>🚀 Memulai</h4>
-    <ol>
-        <li><strong>Tentukan Area Minat:</strong> Gambar persegi panjang di peta atau unggah shapefile (zip)</li>
-        <li><strong>Tentukan Tanggal Akuisisi:</strong> Tentukan tahun - citra akan difilter dari 1 Januari hingga 31 Desember</li>
-        <li><strong>Konfigurasi Parameter:</strong> Tentukan persentase tutupan awan dan tipe sensor (Landsat 5 TM - Landsat 9 OLI2)</li>
-        <li><strong>Buat Mozaik:</strong> Klik jalankan untuk membuat mozaik citra satelit Anda</li>
-    </ol>
+    <div class="steps">
+        <div class="step">
+            <strong>1. Tentukan Area Minat:</strong>
+            <p>Gambar persegi panjang di peta atau unggah shapefile (zip)</p>
+        </div>
+        <div class="step">
+            <strong>2. Tentukan Tanggal Akuisisi:</strong>
+            <p>Tentukan tahun - citra akan difilter dari 1 Januari hingga 31 Desember</p>
+        </div>
+        <div class="step">
+            <strong>3. Konfigurasi Parameter:</strong>
+            <p>Tentukan persentase tutupan awan dan tipe sensor (Landsat 5 TM - Landsat 9 OLI2)</p>
+        </div>
+        <div class="step">
+            <strong>4. Buat Mozaik:</strong>
+            <p>Klik jalankan untuk membuat mozaik citra satelit Anda</p>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -83,3 +86,5 @@ else:
 m = leafmap.Map(center = [-5.003394, 113.598633], zoom = 5)
 m.add_basemap("OpenTopoMap")
 m.to_streamlit(height=500)
+
+show_footer()

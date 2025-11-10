@@ -19,6 +19,7 @@ import numpy as np
 import traceback
 import ee
 import datetime
+from ui_helper import show_footer, show_header
 
 #Page configuration
 st.set_page_config(
@@ -38,10 +39,31 @@ def load_css():
 
 # Apply custom theme
 load_css()
+show_header()
+
+st.markdown("""
+<div class="breadcrumb">Modul 6 › Buat Peta Tutupan Lahan</div>
+""", unsafe_allow_html=True)
 
 
 #Set the page title (for the canvas)
-st.title("Pembuatan Peta Tutupan Lahan")
+st.markdown("""
+<style>
+.gradient-title {
+  font-size: 2.5em;
+  font-weight: 700;
+  text-align: left;
+  background: linear-gradient(90deg, var(--pink), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.4em;
+}
+</style>
+
+<h1 class="gradient-title">Pembuatan Peta Tutupan Lahan</h1>
+""", unsafe_allow_html=True)
 st.divider()
 st.markdown("""
 Modul ini melakukan klasifikasi tutupan lahan menggunakan metode Random Forest. 

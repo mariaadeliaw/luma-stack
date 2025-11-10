@@ -14,6 +14,7 @@ from shapely.geometry import shape, Point, Polygon, mapping
 from epistemx.module_3 import InputCheck, SyncTrainData, LULCSamplingTool
 from epistemx.ee_config import initialize_earth_engine
 from modules.nav import Navbar
+from ui_helper import show_footer, show_header
 
 #Page configuration
 st.set_page_config(
@@ -55,23 +56,75 @@ def load_css():
 
 # Apply custom theme
 load_css()
+show_header()
 
+st.markdown("""
+<div class="breadcrumb">Modul 3 › Penentuan Data Latih</div>
+""", unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+.gradient-title {
+  font-size: 2.5em;
+  font-weight: 700;
+  text-align: left;
+  background: linear-gradient(90deg, var(--pink), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 0.4em;
+}
+</style>
 
-st.title("Penentuan data latih klasifikasi peta tutupan/penggunaan lahan")
+<h1 class="gradient-title">Penentuan Data Latih Klasifikasi<br>Peta Tutupan/Penggunaan Lahan</h1>
+""", unsafe_allow_html=True)
 st.divider()
 st.markdown("Modul ini memungkinkan Anda untuk menyiapkan dan menentukan data sampel yang digunakan untuk proses klasifikasi tutupan/penggunaan lahan. "\
     "Untuk menggunakan modul ini, hasil dari modul 1 dan 2 harus sudah tersedia. Jika sudah terpenuhi, Anda dapat:"\
     )
-st.markdown("1. Mengunggah data latih.")
-st.markdown("2. Membuat data latih melalui sampling on screen.")
-st.markdown("3. Menggunakan data latih bawaan Epistem.")
+
+st.markdown("""
+<style>
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.check-icon {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M9 16.172l-3.586-3.586-1.414 1.414L9 19 20 8l-1.414-1.414z"/></svg>') no-repeat center;
+  mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24"><path d="M9 16.172l-3.586-3.586-1.414 1.414L9 19 20 8l-1.414-1.414z"/></svg>') no-repeat center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  flex-shrink: 0;
+}
+</style>
+
+<div class="check-item">
+  <div class="check-icon"></div>
+  <p>Mengunggah data latih.</p>
+</div>
+
+<div class="check-item">
+  <div class="check-icon"></div>
+  <p>Membuat data latih melalui sampling on screen.</p>
+</div>
+
+<div class="check-item">
+  <div class="check-icon"></div>
+  <p>Menggunakan data latih bawaan Epistem.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # Module description
 markdown = """
 Modul ini dibuat untuk menentukan data latih.
 """
-
 # Add navigation sidebar
 Navbar()
 
