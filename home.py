@@ -6,8 +6,11 @@ import os
 import tempfile
 from ui_helper import show_footer, show_header
 
-st.set_page_config(layout="wide")
-
+st.set_page_config(
+    page_title="Epistem-X Beranda",
+    page_icon="logos/logo_epistem_crop.png",
+    layout="wide"
+)
 # Load custom CSS
 def load_css():
     """Load custom CSS for EpistemX theme"""
