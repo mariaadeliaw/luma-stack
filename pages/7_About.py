@@ -25,8 +25,8 @@ Navbar()
 # Header
 st.markdown("""
 <div class="main-header">
-    <h1>Tentang EpistemX</h1>
-    <p>Platform Pemetaan Tutupan Lahan Berbasis Citra Satelit</p>
+    <h1>Tentang Epistem-X</h1>
+    <p>Wahana pemetaan bentang lahan <i>open-source</i> yang ramah pengguna untuk pemantauan, restorasi, dan pengelolaan bentang lahan di Indonesia.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -37,7 +37,7 @@ with st.container():
     st.markdown("""
     <div style="border: 2px solid #e0e0e0; border-radius: 16px; padding: 30px; margin: 0 0 20px 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);">
         <p style="text-align: justify; line-height: 1.8; font-size: 1em; margin-bottom: 15px;">
-        Epistem-X adalah platform pemetaan lanskap terpadu berbasis komputasi awan yang menyediakan akses ke katalog citra satelit 
+        Epistem-X adalah platform pemetaan bentang lahan terpadu berbasis komputasi awan yang menyediakan akses ke katalog citra satelit 
         dan data spasial terbuka untuk publik. Platform ini dikembangkan secara kolaboratif dengan fokus pada kemudahan penggunaan, 
         sehingga dapat dimanfaatkan bahkan oleh pengguna dengan latar belakang teknis terbatas dalam bidang penginderaan jauh. 
         </p>
@@ -47,18 +47,18 @@ with st.container():
         pada penyiapan data berkualitas untuk menghasilkan peta yang lebih baik.
         </p>
         <p style="text-align: justify; line-height: 1.8; font-size: 1em; margin-bottom: 0;">
-        Epistem-X terwujud berkat dukungan dari proyek <em>Evolving Participatory Information System for Nature-based Climate Solutions</em> (Epistem).
+        Epistem-X terwujud berkat dukungan dari kegiatan <em>Evolving Participatory Information System for Nature-based Climate Solutions</em> (Epistem).
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-with st.expander("📖 Pelajari Lebih Lanjut Tentang Proyek Epistem"):
-    st.write("**Evolving Participatory Information System for Nature-based Climate Solutions (Epistem)** adalah inisiatif kolaboratif yang dirancang untuk memajukan teknologi pemetaan dalam menyediakan data spasial berkualitas tinggi. Proyek ini mendukung upaya pencegahan deforestasi dan pemulihan lanskap yang terdegradasi.")
+with st.expander("📖 Pelajari Lebih Lanjut Tentang Kegiatan Epistem"):
+    st.write("**_Evolving Participatory Information System for Nature-based Climate Solutions (Epistem)_** adalah inisiatif kolaboratif yang dirancang untuk memajukan teknologi pemetaan dalam menyediakan data spasial berkualitas tinggi. Proyek ini mendukung upaya pencegahan deforestasi dan pemulihan bentang lahan yang terdegradasi.")
     
     st.markdown("##### Tujuan")
     st.markdown("""
-    * Mengembangkan teknologi pemetaan lanskap sumber terbuka yang mudah digunakan dan dapat diakses tanpa memerlukan peralatan atau lisensi khusus.
-    * Mengoptimalkan pemanfaatan data penginderaan jauh yang tersedia secara gratis, seperti citra satelit, untuk pemantauan hutan dan lanskap.
+    * Mengembangkan teknologi pemetaan bentang lahan sumber terbuka yang mudah digunakan dan dapat diakses tanpa memerlukan peralatan atau lisensi khusus.
+    * Mengoptimalkan pemanfaatan data penginderaan jauh yang tersedia secara gratis, seperti citra satelit, untuk pemantauan hutan dan bentang lahan.
     * Membangun dan memelihara basis data referensi tutupan lahan dan penggunaan lahan yang terintegrasi dalam platform pemetaan sebagai sistem sumber terbuka.
     * Mendukung berbagai pihak dalam upaya pencegahan deforestasi dan restorasi lintas sektor dan area tematik.
     """)
@@ -73,7 +73,7 @@ with st.container():
     <div class="epistemx-card">
         <p>Algoritma backend Epistem-X dikembangkan dan dipelihara secara kolaboratif oleh tim berikut. 
         Kontribusi mencakup pengembangan algoritma pemrosesan citra dan klasifikasi tutupan/penggunaan lahan
-        serta pengembangan antarmuka pengguna yang intuitif.</p>
+        serta penyediaan prototipe antarmuka untuk pengguna.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -109,12 +109,12 @@ st.markdown('<div class="module-header">🏗️ Arsitektur</div>', unsafe_allow_
 with st.container():
     st.markdown("""
     <div class="epistemx-card">
-        <p>Epistem-X dibangun dengan dukungan proyek Epistem dan berbagai perangkat lunak sumber terbuka lainnya.</p>
+        <p>Epistem-X dibangun dengan dukungan kegiatan Epistem (<i>Evolving Participatory Information System for Nature-based Solutions</i>) dan berbagai perangkat lunak sumber terbuka lainnya.</p>
     </div>
     """, unsafe_allow_html=True)
 
 try:
-    st.image("logos/arsitektur_epistemx.png", caption="Arsitektur Sistem EpistemX", use_container_width=True)
+    st.image("logos/arsitektur_epistemx.png", caption="Arsitektur Sistem Epistem-X", use_container_width=True)
 except FileNotFoundError:
     st.info("📊 Gambar arsitektur akan ditambahkan di sini")
 

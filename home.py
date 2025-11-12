@@ -53,7 +53,7 @@ show_hero_banner()
 st.markdown("""
 <div class="navigation-buttons">
     <div class="nav-button-container">
-        <a href="#alur-kerja" class="nav-button">
+        <a href="https://drive.google.com/file/d/1Uk0ys0Y_KHXNpl9CtZI_dAPHTnfF0AvD/view?usp=sharing" class="nav-button">
             <div class="nav-button-icon">🗺️</div>
             <div class="nav-button-text">
                 <h3>Alur Kerja Penggunaan & Peta Jalan Pengembangan</h3>
@@ -67,16 +67,50 @@ st.markdown("""
                 <p>Akses materi pembelajaran komunitas Karsa Bentala</p>
             </div>
         </a>
-        <a href="#tentang" class="nav-button">
-            <div class="nav-button-icon">ℹ️</div>
-            <div class="nav-button-text">
-                <h3>Tentang</h3>
-                <p>Informasi tentang platform Epistem-X</p>
-            </div>
-        </a>
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# About button using Streamlit navigation with custom styling
+st.markdown("""
+<style>
+.about-nav-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+.about-nav-button {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    max-width: 400px;
+    width: 100%;
+}
+.about-nav-button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Create the About button with proper navigation
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button("ℹ️ Tentang - Informasi tentang platform Epistem-X", 
+                 key="about_nav", 
+                 use_container_width=True,
+                 help="Klik untuk membuka halaman Tentang"):
+        st.switch_page("pages/7_About.py")
 
 st.markdown('<div class="module-header">📋 Modul - Modul Epistem</div>', unsafe_allow_html=True)
 
