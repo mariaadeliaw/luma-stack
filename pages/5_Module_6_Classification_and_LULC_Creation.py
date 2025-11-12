@@ -998,6 +998,79 @@ with tab4:
                         'palette': palette
                     }
                     
+                    # Display legend before the map
+                    st.subheader("🗺️ Legenda Klasifikasi")
+                    
+                    # Create legend in columns for better layout
+                    num_cols = min(4, len(unique_classes))  # Max 4 columns
+                    cols = st.columns(num_cols)
+                    
+                    for idx, class_id in enumerate(unique_classes):
+                        with cols[idx % num_cols]:
+                            class_name = class_info[class_id]['name']
+                            color = class_info[class_id]['color']
+                            
+                            # Create colored legend item
+                            st.markdown(
+                                f"""
+                                <div style='display: flex; align-items: center; margin-bottom: 8px;'>
+                                    <div style='background-color: {color}; 
+                                                width: 20px; height: 20px; 
+                                                border: 1px solid #ccc; 
+                                                margin-right: 8px; 
+                                                border-radius: 3px;'></div>
+                                    <span style='font-size: 14px;'><strong>{class_id}:</strong> {class_name}</span>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                    
+                    # Option to customize colors (expandable section)
+                    with st.expander("🎨 Customize Map Colors", expanded=False):
+                        st.markdown("Adjust colors for each land cover class:")
+                        
+                        # Create color pickers for each class
+                        color_cols = st.columns(min(3, len(unique_classes)))
+                        updated_colors = {}
+                        
+                        for idx, class_id in enumerate(unique_classes):
+                            with color_cols[idx % len(color_cols)]:
+                                class_name = class_info[class_id]['name']
+                                current_color = class_info[class_id]['color']
+                                
+                                # Color picker
+                                new_color = st.color_picker(
+                                    f"Class {class_id}: {class_name}",
+                                    value=current_color,
+                                    key=f"viz_color_{class_id}"
+                                )
+                                updated_colors[class_id] = new_color
+                        
+                        # Update colors if changed
+                        if st.button("🔄 Apply Color Changes"):
+                            for class_id in unique_classes:
+                                class_info[class_id]['color'] = updated_colors[class_id]
+                            palette = [class_info[cls]['color'] for cls in unique_classes]
+                            vis_params['palette'] = palette
+                            st.success("Colors updated! Map will refresh automatically.")
+                            st.rerun()
+                        
+                        # Reset to Module 2 colors button
+                        if 'lulc_classes_final' in st.session_state:
+                            if st.button("🔄 Reset to Module 2 Colors"):
+                                # Reload colors from Module 2
+                                lulc_classes = st.session_state['lulc_classes_final']
+                                for cls in lulc_classes:
+                                    class_id = cls.get('ID', cls.get('Class ID'))
+                                    original_color = cls.get('Color Code', cls.get('Color', '#228B22'))
+                                    class_info[class_id]['color'] = original_color
+                                palette = [class_info[cls]['color'] for cls in unique_classes]
+                                vis_params['palette'] = palette
+                                st.success("Colors reset to Module 2 scheme!")
+                                st.rerun()
+                    
+                    st.markdown("---")
+
                     # Create map
                     if 'train_final' in st.session_state:
                         gdf = st.session_state['train_final']
