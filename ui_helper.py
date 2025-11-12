@@ -130,8 +130,10 @@ def show_hero_banner():
   <div class="hero-content">
     <h2>Selamat Datang di</h2>
     <h1>Platform Pemetaan Tutupan Lahan<br>EpistemX</h1>
-    <p>Teknologi pemetaan untuk menjawab kebutuhan data spasial berkualitas dalam mendukung upaya pencegahan deforestasi dan restorasi lanskap.<br>
-    Dirancang dengan sistem modular dan berakar kuat terhadap keilmuan dan perkembangan teknologi, platform ini diharapkan dapat memberikan fasilitas bagi seluruh kalangan pengguna.</p>
+    <p>Wahana pemetaan bentang lahan open-source yang ramah pengguna, dirancang untuk meningkatkan partisipasi & transparansi dalam penyediaan data berkualitas bagi pengelolaan bentang lahan di Indonesia.
+    <br>
+    Didukung oleh pengindraan jauh, pembelajaran mesin, dan data partisipatif untuk memperkuat upaya restorasi dan pencegahan deforestasi.
+    </p>
   </div>
 </div>
 """, unsafe_allow_html=True)
