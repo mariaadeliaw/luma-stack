@@ -49,7 +49,38 @@ Navbar()
 # Display hero banner with title overlay
 show_hero_banner()
 
+# Navigation buttons section
+st.markdown("""
+<div class="navigation-buttons">
+    <div class="nav-button-container">
+        <a href="#alur-kerja" class="nav-button">
+            <div class="nav-button-icon">🗺️</div>
+            <div class="nav-button-text">
+                <h3>Alur Kerja Penggunaan & Peta Jalan Pengembangan</h3>
+                <p>Diagram lengkap alur penggunaan wahana dan rincian fase-fase pengembangan</p>
+            </div>
+        </a>
+        <a href="https://epistem-x.agroforestri.id/" target="_blank" class="nav-button">
+            <div class="nav-button-icon">📚</div>
+            <div class="nav-button-text">
+                <h3>Media Belajar Daring</h3>
+                <p>Akses materi pembelajaran komunitas Karsa Bentala</p>
+            </div>
+        </a>
+        <a href="#tentang" class="nav-button">
+            <div class="nav-button-icon">ℹ️</div>
+            <div class="nav-button-text">
+                <h3>Tentang</h3>
+                <p>Informasi tentang platform Epistem-X</p>
+            </div>
+        </a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 st.markdown('<div class="module-header">📋 Modul - Modul Epistem</div>', unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 st.markdown("""
 <div class="epistemx-card">
