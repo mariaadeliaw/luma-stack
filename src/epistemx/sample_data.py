@@ -229,8 +229,36 @@ try:
                             'warnings': []
                         }
                     }
+                elif training_shp_path:
+                    logger.info(f"Loading training data from shapefile: {training_shp_path}")
+                    data = gpd.read_file(training_shp_path)
+                    training_gdf = gpd.GeoDataFrame(data, geometry='geometry', crs='EPSG:4326')
+                    
+                    # Log class field info
+                    if 'kelas' in training_gdf.columns:
+                        unique_classes = training_gdf['kelas'].unique()
+                        logger.info(f"Unique classes in training data: {unique_classes}")
+                        logger.info(f"Class counts: {training_gdf['kelas'].value_counts().to_dict()}")
+                    else:
+                        logger.warning("'kelas' field not found in training data")
+                        logger.info(f"Available columns: {training_gdf.columns.tolist()}")
+                    
+                    return {
+                        'training_data': training_gdf,
+                        'landcover_df': landcover_df,
+                        'class_field': 'kelas',
+                        'validation_results': {
+                            'total_points': len(training_gdf),
+                            'valid_points': len(training_gdf),
+                            'points_after_class_filter': len(training_gdf),
+                            'invalid_classes': [],
+                            'outside_aoi': [],
+                            'insufficient_samples': [],
+                            'warnings': []
+                        }
+                    }
                 else:
-                    raise ValueError("No training data path provided")
+                    raise ValueError("Either training_ee_path or training_shp_path must be provided")
                     
             except Exception as e:
                 logger.error(f"Error loading training data: {str(e)}")
