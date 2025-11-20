@@ -1,4 +1,4 @@
-# Epistem Land Use Land Cover Classification Algorithm
+# LUMA Back-end Development
 
 This repository contains the core backend algorithms and modules for the Epistem land use land cover mapping platform.
 

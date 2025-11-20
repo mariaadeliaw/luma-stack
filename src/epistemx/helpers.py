@@ -1,5 +1,7 @@
 import ee
-ee.Initialize()
+from .ee_config import ensure_ee_initialized
+
+# Do not initialize Earth Engine at import time. Initialize when functions are called.
 
 #############################  Area of Interest  ###########################
 def get_aoi_from_gaul(country="Indonesia", province="Sumatera Selatan"):
@@ -17,6 +19,7 @@ def get_aoi_from_gaul(country="Indonesia", province="Sumatera Selatan"):
     --------
     ee.Geometry : Area of interest geometry
     """
+    ensure_ee_initialized()
     admin = ee.FeatureCollection("FAO/GAUL/2015/level1")
     aoi_fc = admin.filter(ee.Filter.eq('ADM0_NAME', country)).filter(
         ee.Filter.eq('ADM1_NAME', province)
@@ -91,4 +94,3 @@ def distance_metric_stack(aoi, max_dist = 500000, in_meters = False):
     dist_settlement = distance_image(hrsl_masked).rename('dist_settlement')
     # Stack into one image
     return ee.Image.cat(dist_roads, dist_coast, dist_settlement)
-
