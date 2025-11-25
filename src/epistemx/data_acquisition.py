@@ -662,7 +662,7 @@ class Reflectance_Stats:
             print()
         
         print("="*60)
-
+#Class for converting image collection into single image either using mosaic or temporal compositing
 class final_Image:
     """
     Class for combining image collections to get the final images.
@@ -679,10 +679,10 @@ class final_Image:
         self.logger.setLevel(log_level)
         self.logger.info("final_Image initialized.")
     
-    def get_single_date_image(self, collection, aoi, target_date=None, mosaic=True):
+    def get_quality_mosaic(self, collection, aoi, quality_band='NDVI', verbose=True):
         """
-        Get a single-date image from collection, either by mosaicking multiple scenes
-        or selecting the closest date if target_date is specified.
+        Create a quality mosaic that selects the best available pixels across the AOI.
+        Uses qualityMosaic to automatically select pixels with highest quality metric.
         
         Parameters
         ----------
@@ -690,77 +690,97 @@ class final_Image:
             Filtered image collection from Reflectance_Data
         aoi : ee.Geometry or ee.FeatureCollection
             Area of interest for clipping
-        target_date : str, optional
-            Target date in 'YYYY-MM-DD' format. If None, uses the first available date
-        mosaic : bool
-            If True, mosaic multiple scenes from the same date (default: True)
+        quality_band : str
+            Band to use for quality assessment. Options:
+            - 'NDVI': Normalized Difference Vegetation Index (default, good for vegetated areas)
+            - 'NIR': Near-infrared band (good general purpose)
+            - 'BLUE': Blue band (inverted - selects clearest pixels)
+        verbose : bool
+            If True, log detailed information (default: True)
             
         Returns
         -------
         ee.Image
-            Single image clipped to AOI
+            Quality mosaic image clipped to AOI with best available pixels
             
         Example
         -------
         >>> data_fetcher = Reflectance_Data()
         >>> collection, stats = data_fetcher.get_optical_data(aoi, 2020, 2020, 'L8_SR')
         >>> image_processor = final_Image()
-        >>> single_image = image_processor.get_single_date_image(collection, aoi, '2020-06-15')
+        >>> quality_image = image_processor.get_quality_mosaic(collection, aoi, quality_band='NDVI')
         """
         if isinstance(aoi, ee.FeatureCollection):
             geometry = aoi.geometry()
         else:
             geometry = aoi
-            
-        if target_date:
-            # Filter to specific date
-            filtered = collection.filterDate(target_date, 
-                                            ee.Date(target_date).advance(1, 'day'))
-            size = filtered.size().getInfo()
-            
-            if size == 0:
-                self.logger.warning(f"No images found for date {target_date}")
-                # Find closest date
-                all_dates = collection.aggregate_array('system:time_start').getInfo()
-                if not all_dates:
-                    raise ValueError("Collection is empty")
-                    
-                target_ms = ee.Date(target_date).millis().getInfo()
-                closest_date = min(all_dates, key=lambda x: abs(x - target_ms))
-                closest_str = datetime.fromtimestamp(closest_date/1000).strftime('%Y-%m-%d')
-                self.logger.info(f"Using closest available date: {closest_str}")
-                
-                filtered = collection.filterDate(closest_str, 
-                                                ee.Date(closest_str).advance(1, 'day'))
-            else:
-                self.logger.info(f"Found {size} scene(s) for date {target_date}")
-        else:
-            # Use first available date
-            first_date = ee.Date(collection.first().get('system:time_start'))
-            next_day = first_date.advance(1, 'day')
-            filtered = collection.filterDate(first_date, next_day)
-            date_str = datetime.fromtimestamp(first_date.millis().getInfo()/1000).strftime('%Y-%m-%d')
-            self.logger.info(f"Using first available date: {date_str}")
         
-        # Create final image
-        if mosaic:
-            image = filtered.mosaic()
-            self.logger.info("Created mosaic from multiple scenes")
-        else:
-            image = filtered.first()
-            self.logger.info("Selected first scene")
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create quality mosaic")
+            self.logger.info(f"Creating quality mosaic from {size} images using {quality_band} as quality metric")
+        
+        # Add quality band based on selection
+        def add_quality_band(img):
+            if quality_band == 'NDVI':
+                # Calculate NDVI: (NIR - RED) / (NIR + RED)
+                ndvi = img.normalizedDifference(['NIR', 'RED']).rename('quality')
+                return img.addBands(ndvi)
+            elif quality_band == 'NIR':
+                # Use NIR band directly (higher values = better)
+                return img.addBands(img.select('NIR').rename('quality'))
+            elif quality_band == 'BLUE':
+                # Invert BLUE band (lower blue = clearer, so negate it)
+                inverted_blue = img.select('BLUE').multiply(-1).rename('quality')
+                return img.addBands(inverted_blue)
+            else:
+                # Use specified band directly
+                return img.addBands(img.select(quality_band).rename('quality'))
+        
+        # Add quality band to collection
+        collection_with_quality = collection.map(add_quality_band)
+        
+        # Create quality mosaic - automatically selects pixels with highest quality values
+        mosaic = collection_with_quality.qualityMosaic('quality')
+        
+        # Remove the quality band from output
+        original_bands = collection.first().bandNames()
+        mosaic = mosaic.select(original_bands)
         
         # Clip to AOI
-        clipped = image.clip(geometry)
+        clipped = mosaic.clip(geometry)
         
-        # Preserve metadata from first image
-        first_img = filtered.first()
-        clipped = clipped.copyProperties(first_img, first_img.propertyNames())
+        if verbose:
+            self.logger.info(f"Quality mosaic created covering AOI with best available pixels")
+        
+        # Add metadata
+        first_img = collection.first()
+        last_img = collection.sort('system:time_start', False).first()
+        
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        
+        clipped = clipped.set({
+            'mosaic_type': 'quality_mosaic',
+            'quality_metric': quality_band,
+            'date_range_start': start_date,
+            'date_range_end': end_date,
+            'image_count': collection.size()
+        })
+        
+        # Cast to ee.Image to avoid ee.Element
+        clipped = ee.Image(clipped)
+        
+        if verbose:
+            start_str = start_date.getInfo()
+            end_str = end_date.getInfo()
+            self.logger.info(f"Mosaic date range: {start_str} to {end_str}")
         
         return clipped
     
     def get_temporal_composite(self, collection, aoi, reducer='median', 
-                              clip_output=True, add_band_stats=False):
+                              clip_output=True, add_band_stats=False, verbose=True):
         """
         Create a temporal composite from image collection using specified reducer.
         
@@ -777,6 +797,8 @@ class final_Image:
             Whether to clip the output to AOI (default: True)
         add_band_stats : bool
             If True, add additional bands with stdDev and count (default: False)
+        verbose : bool
+            If True, log detailed information (default: True)
             
         Returns
         -------
@@ -814,12 +836,12 @@ class final_Image:
         else:
             ee_reducer = reducer
         
-        # Check collection size
-        size = collection.size().getInfo()
-        if size == 0:
-            raise ValueError("Collection is empty, cannot create composite")
-        
-        self.logger.info(f"Creating {reducer} composite from {size} images")
+        # Check collection size - only if verbose to avoid unnecessary getInfo()
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create composite")
+            self.logger.info(f"Creating {reducer} composite from {size} images")
         
         # Create composite
         if add_band_stats:
@@ -833,22 +855,29 @@ class final_Image:
         # Clip if requested
         if clip_output:
             composite = composite.clip(geometry)
-            self.logger.info("Composite clipped to AOI")
+            if verbose:
+                self.logger.info("Composite clipped to AOI")
         
-        # Add metadata
+        # Add metadata - use server-side operations, avoid getInfo()
         first_img = collection.first()
         last_img = collection.sort('system:time_start', False).first()
         
-        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd').getInfo()
-        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd').getInfo()
+        # Store dates as server-side strings to avoid getInfo() calls
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        size_server = collection.size()
         
         composite = composite.set({
             'composite_start_date': start_date,
             'composite_end_date': end_date,
-            'composite_count': size,
+            'composite_count': size_server,
             'composite_reducer': str(reducer)
         })
         
-        self.logger.info(f"Composite created from {start_date} to {end_date}")
+        if verbose:
+            # Only call getInfo() for logging if verbose is True
+            start_date_str = start_date.getInfo()
+            end_date_str = end_date.getInfo()
+            self.logger.info(f"Composite created from {start_date_str} to {end_date_str}")
         
         return composite
