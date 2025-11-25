@@ -678,10 +678,11 @@ class final_Image:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(log_level)
         self.logger.info("final_Image initialized.")
-    
+    #Quality mosaic for stacking multiple scene and then clip them
+    #Quality mosaic use all the pixel value in a single scene
     def get_quality_mosaic(self, collection, aoi, quality_band='NDVI', verbose=True):
         """
-        Create a quality mosaic that selects the best available pixels across the AOI.
+        Create a mosaic that selects the best available pixels across the AOI.
         Uses qualityMosaic to automatically select pixels with highest quality metric.
         
         Parameters
@@ -692,9 +693,9 @@ class final_Image:
             Area of interest for clipping
         quality_band : str
             Band to use for quality assessment. Options:
-            - 'NDVI': Normalized Difference Vegetation Index (default, good for vegetated areas)
-            - 'NIR': Near-infrared band (good general purpose)
-            - 'BLUE': Blue band (inverted - selects clearest pixels)
+            - 'NDVI': Normalized Difference Vegetation Index (Select pixels with high NDVI value)
+            - 'NIR': Near-infrared band (general purpose, select pixel with highest NIR reflectance)
+            - 'BLUE': Blue band (inverted - selects clearest pixels, since lower blue value correspond to haze)
         verbose : bool
             If True, log detailed information (default: True)
             
@@ -710,6 +711,7 @@ class final_Image:
         >>> image_processor = final_Image()
         >>> quality_image = image_processor.get_quality_mosaic(collection, aoi, quality_band='NDVI')
         """
+        #safety checks, make sure the AOI is ee feature collection
         if isinstance(aoi, ee.FeatureCollection):
             geometry = aoi.geometry()
         else:
@@ -721,33 +723,30 @@ class final_Image:
                 raise ValueError("Collection is empty, cannot create quality mosaic")
             self.logger.info(f"Creating quality mosaic from {size} images using {quality_band} as quality metric")
         
-        # Add quality band based on selection
+        #Add quality band based on selection
         def add_quality_band(img):
             if quality_band == 'NDVI':
-                # Calculate NDVI: (NIR - RED) / (NIR + RED)
+                #NDVI: (NIR - RED) / (NIR + RED)
                 ndvi = img.normalizedDifference(['NIR', 'RED']).rename('quality')
                 return img.addBands(ndvi)
             elif quality_band == 'NIR':
-                # Use NIR band directly (higher values = better)
+                #If NIR band is selected (higher, better)
                 return img.addBands(img.select('NIR').rename('quality'))
             elif quality_band == 'BLUE':
-                # Invert BLUE band (lower blue = clearer, so negate it)
+                #Invert BLUE band (lower blue = clearer, so negate it)
                 inverted_blue = img.select('BLUE').multiply(-1).rename('quality')
                 return img.addBands(inverted_blue)
             else:
                 # Use specified band directly
                 return img.addBands(img.select(quality_band).rename('quality'))
         
-        # Add quality band to collection
+        #Add quality band to collection
         collection_with_quality = collection.map(add_quality_band)
-        
-        # Create quality mosaic - automatically selects pixels with highest quality values
+        #automatically selects pixels with highest quality values
         mosaic = collection_with_quality.qualityMosaic('quality')
-        
-        # Remove the quality band from output
+        #Remove the quality band from output
         original_bands = collection.first().bandNames()
         mosaic = mosaic.select(original_bands)
-        
         # Clip to AOI
         clipped = mosaic.clip(geometry)
         
@@ -769,7 +768,7 @@ class final_Image:
             'image_count': collection.size()
         })
         
-        # Cast to ee.Image to avoid ee.Element
+        # Cast to ee.Image
         clipped = ee.Image(clipped)
         
         if verbose:
@@ -778,11 +777,14 @@ class final_Image:
             self.logger.info(f"Mosaic date range: {start_str} to {end_str}")
         
         return clipped
-    
+    #Temporal composite computes statistics across pixels
+    #logic behind cloud 'removal' is that cloud typically have higher pixel value due to high reflectance,
+    #thus when median composite is used cloud get 'remove' from the final image
     def get_temporal_composite(self, collection, aoi, reducer='median', 
-                              clip_output=True, add_band_stats=False, verbose=True):
+                              add_band_stats=False, verbose=True):
         """
         Create a temporal composite from image collection using specified reducer.
+        Output is always clipped to the AOI.
         
         Parameters
         ----------
@@ -791,10 +793,8 @@ class final_Image:
         aoi : ee.Geometry or ee.FeatureCollection
             Area of interest for clipping
         reducer : str or ee.Reducer
-            Reduction method: 'median', 'mean', 'min', 'max', 'percentile_XX'
+            Reduction method: 'median', 'mean', 'min', 'max', 'percentile_'
             (default: 'median')
-        clip_output : bool
-            Whether to clip the output to AOI (default: True)
         add_band_stats : bool
             If True, add additional bands with stdDev and count (default: False)
         verbose : bool
@@ -803,7 +803,7 @@ class final_Image:
         Returns
         -------
         ee.Image
-            Composite image
+            Composite image clipped to AOI with original band names (NIR, RED, etc.)
             
         Example
         -------
@@ -817,7 +817,10 @@ class final_Image:
         else:
             geometry = aoi
         
-        # Get reducer
+        # Get original band names before reduction
+        original_bands = collection.first().bandNames()
+        
+        #Get reducer
         if isinstance(reducer, str):
             reducer_lower = reducer.lower()
             if reducer_lower == 'median':
@@ -849,14 +852,40 @@ class final_Image:
             composite = collection.reduce(ee.Reducer.median()
                                         .combine(ee.Reducer.stdDev(), '', True)
                                         .combine(ee.Reducer.count(), '', True))
+            # For stats, keep the suffixes but rename main bands
+            # Get band names after reduction
+            composite_bands = composite.bandNames()
+            
+            # Create new names: main bands without suffix, stats bands with suffix
+            def rename_band(band_name):
+                band_str = ee.String(band_name)
+                # Check if it's a main band (ends with _median, _mean, etc.)
+                is_main = band_str.match('.*_(median|mean|min|max|p\\d+)$')
+                # Check if it's a stdDev band
+                is_stddev = band_str.match('.*_stdDev$')
+                # Check if it's a count band
+                is_count = band_str.match('.*_count$')
+                
+                # For main bands, remove the suffix
+                new_name = ee.Algorithms.If(
+                    is_main,
+                    band_str.replace('_(median|mean|min|max|p\\d+)$', ''),
+                    band_name  # Keep stdDev and count suffixes
+                )
+                return new_name
+            
+            new_band_names = composite_bands.map(rename_band)
+            composite = composite.rename(new_band_names)
         else:
             composite = collection.reduce(ee_reducer)
+            # Rename bands to remove reducer suffix (e.g., 'NIR_median' -> 'NIR')
+            composite = composite.rename(original_bands)
         
-        # Clip if requested
-        if clip_output:
-            composite = composite.clip(geometry)
-            if verbose:
-                self.logger.info("Composite clipped to AOI")
+        # Clip to AOI (always required)
+        composite = composite.clip(geometry)
+        
+        if verbose:
+            self.logger.info("Composite clipped to AOI")
         
         # Add metadata - use server-side operations, avoid getInfo()
         first_img = collection.first()
@@ -875,7 +904,7 @@ class final_Image:
         })
         
         if verbose:
-            # Only call getInfo() for logging if verbose is True
+            #Only call the client side info if needed
             start_date_str = start_date.getInfo()
             end_date_str = end_date.getInfo()
             self.logger.info(f"Composite created from {start_date_str} to {end_date_str}")
