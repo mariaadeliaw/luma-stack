@@ -1,7 +1,7 @@
 """
 Earth Engine Configuration Module
 
-Centralized Earth Engine authentication and initialization for the epistemx package.
+Centralized Earth Engine authentication and initialization for the luma_ge package.
 This module ensures Earth Engine is properly set up before any GEE operations.
 
 Supports both service account authentication and manual user authentication.
@@ -41,7 +41,7 @@ def initialize_with_service_account(
         
     Example
     -------
-    >>> from epistemx.ee_config import initialize_with_service_account
+    >>> from luma_ge.ee_config import initialize_with_service_account
     >>> initialize_with_service_account('path/to/service-account.json')
     """
     global _ee_initialized
@@ -133,7 +133,7 @@ def authenticate_manually(project: Optional[str] = None) -> bool:
         
     Example
     -------
-    >>> from epistemx.ee_config import authenticate_manually
+    >>> from luma_ge.ee_config import authenticate_manually
     >>> authenticate_manually()
     """
     global _ee_initialized
@@ -163,7 +163,7 @@ def _print_manual_auth_instructions() -> None:
     1. Make sure you already have a google cloud project that has enable the Earth Engine API and registered to 
        commercial or non-commercial use. For more information visit: https://developers.google.com/earth-engine/guides/access 
     
-    2. you can authenticate programmatically by calling: from epistemx.ee_config import authenticate_manually
+    2. you can authenticate programmatically by calling: from luma_ge.ee_config import authenticate_manually
        authenticate_manually()
     
     3. This will open a web browser. Sign in with your Google account that has Earth Engine access.
@@ -199,7 +199,7 @@ def initialize_earth_engine(
         
     Example
     -------
-    >>> from epistemx.ee_config import initialize_earth_engine
+    >>> from luma_ge.ee_config import initialize_earth_engine
     >>> # Manual authentication
     >>> initialize_earth_engine()
     >>> # Service account authentication
@@ -350,7 +350,7 @@ def setup_earth_engine(
         
     Example
     -------
-    >>> from epistemx.ee_config import setup_earth_engine
+    >>> from luma_ge.ee_config import setup_earth_engine
     >>> # Try automatic setup
     >>> setup_earth_engine()
     >>> # Setup with service account

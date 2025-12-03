@@ -4,7 +4,7 @@ This repository contains the core backend algorithms and modules for the Epistem
 
 ## File Structure
 
-- **`src/epistemx/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
+- **`src/luma_ge/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
 - **`notebooks/`**: Jupyter notebooks used for development, experimentation, and demonstrating the functionality of the core modules.
 - **`home.py` & `pages/`**: A minimal Streamlit application for testing and demonstrating the backend algorithms.
 - **`environment.yml`**: The environment file for creating a reproducible environment. It lists all necessary Python packages and dependencies.
@@ -28,7 +28,7 @@ git --version
 conda --version
 ```
 
-**Warning for Windows Users: Do not add Python or Conda to your system PATH.** This causes conflicts and prevents the epistemx environment from working correctly. For details, see [FAQ- Should I add Anaconda to the Windows PATH?](https://www.anaconda.com/docs/getting-started/working-with-conda/reference/faq#should-i-add-anaconda-to-the-windows-path).
+**Warning for Windows Users: Do not add Python or Conda to your system PATH.** This causes conflicts and prevents the luma_ge environment from working correctly. For details, see [FAQ- Should I add Anaconda to the Windows PATH?](https://www.anaconda.com/docs/getting-started/working-with-conda/reference/faq#should-i-add-anaconda-to-the-windows-path).
 
 ### 2. Set Up the Python Environment
 
@@ -38,24 +38,24 @@ Choose one of the following setup methods based on your needs:
 
 _Best for Windows 11 x64 machines - fastest setup with all dependencies pre-installed._
 
-1. Download the prepackaged `epistemx` conda-pack archive from [SharePoint](https://icrafcifor.sharepoint.com/:u:/r/sites/EPISTEM/Shared%20Documents/EPISTEM%20Consortium/1%20Monitoring%20Technology/Prototyping/python_environment/epistemx.tar.gz?csf=1&web=1&e=eGbscP). You will need access to the EPISTEM SharePoint workspace.
+1. Download the prepackaged `luma_ge` conda-pack archive from [SharePoint](https://icrafcifor.sharepoint.com/:u:/r/sites/EPISTEM/Shared%20Documents/EPISTEM%20Consortium/1%20Monitoring%20Technology/Prototyping/python_environment/luma_ge.tar.gz?csf=1&web=1&e=eGbscP). You will need access to the EPISTEM SharePoint workspace.
 
 2. Unpack the archive and make it usable on your machine by following [these instructions](https://gist.github.com/pmbaumgartner/2626ce24adb7f4030c0075d2b35dda32) for restoring a conda-pack environment. In short, place the archive in the directory where you keep your Conda environments and extract it. Example commands (adapt paths to your platform):
 
    ```powershell
-   mkdir -p ~/epistemx
-   tar -xzf epistemx.tar.gz -C ~/epistemx
+   mkdir -p ~/luma_ge
+   tar -xzf luma_ge.tar.gz -C ~/luma_ge
    ```
 
 3. Then, activate the environment and unpack it:
 
    ```powershell
-   cd \path\to\epistemx
+   cd \path\to\luma_ge
    .\Scripts\activate.bat
    .\Scripts\conda-unpack.exe
    ```
 
-   The epistemx environment now includes all dependencies for Earth Engine, JupyterLab, and Streamlit.
+   The luma_ge environment now includes all dependencies for Earth Engine, JupyterLab, and Streamlit.
 
 4. Clone the repository and proceed to [Usage](#4-usage).
 
@@ -73,17 +73,18 @@ _Recommended for macOS and Linux systems, or if you prefer building the environm
 2. Create the environment using the provided `environment.yml`:
 
    ```bash
-   conda env create -f environment.yml -n epistemx
-   conda activate epistemx
+   conda env create -f environment.yml -n luma_ge
+   conda activate luma_ge
    ```
 
 3. Proceed to [Usage](#4-usage).
 
 #### Option C: GitHub Codespaces (Cloud-based, No Local Setup)
 
-_Best for quick experimentation without local installation, or when working on different machines. Note: This option supports running the epistemx package and notebooks only; Streamlit applications are not supported in Codespaces._
+_Best for quick experimentation without local installation, or when working on different machines. Note: This option supports running the luma_ge package and notebooks only; Streamlit applications are not supported in Codespaces._
 
 1. **Create a Codespace** from the repository:
+
    - Navigate to the [EpistemXBackend repository](https://github.com/epistem-io/EpistemXBackend) on GitHub
    - Click the green **Code** button
    - Select **Codespaces** tab → **Create codespace on update_main**
@@ -103,8 +104,6 @@ _Best for quick experimentation without local installation, or when working on d
 - Use the VS Code terminal (Ctrl+\`) for additional commands if needed
 - Codespaces automatically save your work; you can return to the same Codespace later
 
-
-
 ### 4. Usage
 
 #### Running the Jupyter Notebooks
@@ -121,7 +120,7 @@ Launch Jupyter Lab from the project root to explore the project's modules and wo
 jupyter lab
 ```
 
-Start with `Module_implementation.ipynb` in the `notebooks/` directory for a focused guide on individual module testing and development. This notebook provides step-by-step examples for working with the core epistemx modules.
+Start with `Module_implementation.ipynb` in the `notebooks/` directory for a focused guide on individual module testing and development. This notebook provides step-by-step examples for working with the core luma_ge modules.
 
 #### Running the Streamlit Application
 
