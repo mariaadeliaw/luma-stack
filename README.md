@@ -1,4 +1,4 @@
-# LUMA Back-end Development
+# Luma Geospatial Engine
 
 A Python package that serves as the geospatial engine for the Epistem Land Use Mapping for All (Luma) platform.
 
@@ -6,8 +6,6 @@ A Python package that serves as the geospatial engine for the Epistem Land Use M
 
 - **`src/luma_ge/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
 - **`notebooks/`**: Jupyter notebooks used for development, experimentation, and demonstrating the functionality of the core modules.
-
-- **`environment.yml`**: The environment file for creating a reproducible environment. It lists all necessary Python packages and dependencies.
 - **`pyproject.toml`**: The standard Python project configuration file. It defines project metadata and core dependencies for `pip`.
 
 ## Getting Started
