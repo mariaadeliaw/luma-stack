@@ -1,12 +1,12 @@
 # LUMA Back-end Development
 
-This repository contains the core backend algorithms and modules for the Epistem land use land cover mapping platform.
+A Python package that serves as the geospatial engine for the Epistem Land Use Mapping for All (Luma) platform.
 
 ## File Structure
 
 - **`src/luma_ge/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
 - **`notebooks/`**: Jupyter notebooks used for development, experimentation, and demonstrating the functionality of the core modules.
-- **`home.py` & `pages/`**: A minimal Streamlit application for testing and demonstrating the backend algorithms.
+
 - **`environment.yml`**: The environment file for creating a reproducible environment. It lists all necessary Python packages and dependencies.
 - **`pyproject.toml`**: The standard Python project configuration file. It defines project metadata and core dependencies for `pip`.
 
@@ -34,54 +34,56 @@ conda --version
 
 Choose one of the following setup methods based on your needs:
 
-#### Option A: Prepackaged Conda-Pack Environment (Windows 11 x64)
+#### Option A: Install from Git
 
-_Best for Windows 11 x64 machines - fastest setup with all dependencies pre-installed._
+_Recommended for most users - install directly from the repository._
 
-1. Download the prepackaged `luma_ge` conda-pack archive from [SharePoint](https://icrafcifor.sharepoint.com/:u:/r/sites/EPISTEM/Shared%20Documents/EPISTEM%20Consortium/1%20Monitoring%20Technology/Prototyping/python_environment/luma_ge.tar.gz?csf=1&web=1&e=eGbscP). You will need access to the EPISTEM SharePoint workspace.
+**Direct install (no cloning required):**
 
-2. Unpack the archive and make it usable on your machine by following [these instructions](https://gist.github.com/pmbaumgartner/2626ce24adb7f4030c0075d2b35dda32) for restoring a conda-pack environment. In short, place the archive in the directory where you keep your Conda environments and extract it. Example commands (adapt paths to your platform):
+```bash
+pip install git+https://github.com/epistem-io/EpistemXBackend.git
+```
 
-   ```powershell
-   mkdir -p ~/luma_ge
-   tar -xzf luma_ge.tar.gz -C ~/luma_ge
-   ```
+**Or clone and install in editable mode:**
 
-3. Then, activate the environment and unpack it:
-
-   ```powershell
-   cd \path\to\luma_ge
-   .\Scripts\activate.bat
-   .\Scripts\conda-unpack.exe
-   ```
-
-   The luma_ge environment now includes all dependencies for Earth Engine, JupyterLab, and Streamlit.
-
-4. Clone the repository and proceed to [Usage](#4-usage).
-
-#### Option B: Build from `environment.yml` (macOS/Linux)
-
-_Recommended for macOS and Linux systems, or if you prefer building the environment yourself._
-
-1. Clone the repository first:
+1. Clone the repository:
 
    ```bash
    git clone https://github.com/epistem-io/EpistemXBackend.git
    cd EpistemXBackend
    ```
 
-2. Create the environment using the provided `environment.yml`:
+2. Install the package using pip:
 
    ```bash
-   conda env create -f environment.yml -n luma_ge
-   conda activate luma_ge
+   pip install -e .
    ```
+
+   This will install `luma_ge` and all its dependencies as specified in `pyproject.toml`.
 
 3. Proceed to [Usage](#4-usage).
 
+#### Option B: Docker Container
+
+_Best for deployment or isolated environments._
+
+1. Build the Docker image:
+
+   ```bash
+   docker build -t luma-ge .
+   ```
+
+2. Run the container:
+
+   ```bash
+   docker run -p 7860:7860 luma-ge
+   ```
+
+3. The application will be available at `http://localhost:7860`.
+
 #### Option C: GitHub Codespaces (Cloud-based, No Local Setup)
 
-_Best for quick experimentation without local installation, or when working on different machines. Note: This option supports running the luma_ge package and notebooks only; Streamlit applications are not supported in Codespaces._
+_Best for quick experimentation without local installation, or when working on different machines._
 
 1. **Create a Codespace** from the repository:
 
@@ -100,7 +102,6 @@ _Best for quick experimentation without local installation, or when working on d
 
 - Notebooks run directly in VS Code's built-in notebook editor
 - Long-running Earth Engine operations may take several minutes; monitor progress in cell outputs
-- Download results locally by right-clicking files in the file explorer → **Download**
 - Use the VS Code terminal (Ctrl+\`) for additional commands if needed
 - Codespaces automatically save your work; you can return to the same Codespace later
 
@@ -121,13 +122,3 @@ jupyter lab
 ```
 
 Start with `Module_implementation.ipynb` in the `notebooks/` directory for a focused guide on individual module testing and development. This notebook provides step-by-step examples for working with the core luma_ge modules.
-
-#### Running the Streamlit Application
-
-The included Streamlit app is a minimal implementation for testing the backend. To launch it, run the following command from the project's root directory:
-
-```bash
-python -m streamlit run home.py
-```
-
-This will open the application in your default web browser.
