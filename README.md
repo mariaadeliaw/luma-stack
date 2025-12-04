@@ -59,7 +59,15 @@ pip install git+https://github.com/epistem-io/EpistemXBackend.git
 
    This will install `luma_ge` and all its dependencies as specified in `pyproject.toml`.
 
-3. Proceed to [Usage](#3-usage).
+3. Usage:
+
+   Launch Jupyter Lab to work with the notebooks:
+
+   ```bash
+   jupyter lab
+   ```
+
+   Then open `notebooks/Module_implementation.ipynb` for a step-by-step guide on using the `luma_ge` modules.
 
 #### Option B: Docker Container
 
@@ -90,27 +98,8 @@ _Best for quick experimentation without local installation, or when working on d
    - Select **Codespaces** tab → **Create codespace on update_main**
    - Wait for the environment to initialize (typically 2-3 minutes)
 
-2. **Start working with notebooks**:
-   - Open the `notebooks/Module_implementation.ipynb` file in VS Code's notebook editor within the Codespace
-   - When prompted, select the Python kernel provided by the Codespace environment
-   - The required environment and package setup are already configured in Codespaces
-   - Work through the notebook for step-by-step examples and module testing
+2. **Start Working**:
 
-**Codespaces Tips:**
-
-- Notebooks run directly in VS Code's built-in notebook editor
-- Long-running Earth Engine operations may take several minutes; monitor progress in cell outputs
-- Use the VS Code terminal (Ctrl+\`) for additional commands if needed
-- Codespaces automatically save your work; you can return to the same Codespace later
-
-### 3. Usage
-
-After completing **Option A** (local installation), launch Jupyter Lab to work with the notebooks:
-
-```bash
-jupyter lab
-```
-
-Then open `notebooks/Module_implementation.ipynb` for a step-by-step guide on using the luma_ge modules.
-
-> **Note:** If you're using **Option B** (Docker) or **Option C** (Codespaces), Jupyter Lab is already configured and ready to use - no additional steps needed.
+   - Open the `notebooks/Module_implementation.ipynb` file in VS Code's notebook editor within the Codespace.
+   - Choose the pre-configured Python environment (dependencies are already installed).
+   - Execute the cells to observe how individual modules function with their default settings and example inputs from the `/data` directory.
