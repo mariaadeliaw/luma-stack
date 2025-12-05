@@ -10,7 +10,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-# Module 1: Cloudless Image Mosaic
+# Module 1: Near Cloud Free Acquisition
 ## System Response 1.2: Search and Filter Imagery
 class Reflectance_Data:
     """Class for fetching and pre-processing Landsat image collection from Google Earth Engine API."""
@@ -73,9 +73,9 @@ class Reflectance_Data:
             'description': 'Landsat 9 Operational Land Imager-2 Surface Reflectance'
         }
     }
-#Define the thermal datasets. The thermal bands used is from Collection 2 Top-of-atmosphere data 
-#The TOA data provide consistent result and contain minimum missing pixel data
-#Note: Landsat 1-3 MSS sensors did not have thermal bands, so they are not included
+    #Define the thermal datasets. The thermal bands used is from Collection 2 Top-of-atmosphere data 
+    #The TOA data provide consistent result and contain minimum missing pixel data
+    #Note: Landsat 1-3 MSS sensors did not have thermal bands, so they are not included
     THERMAL_DATASETS = {
         'L4_TOA': {
             'collection': 'LANDSAT/LT04/C02/T1_TOA',
@@ -129,17 +129,35 @@ class Reflectance_Data:
     
     def has_thermal_capability(self, optical_data):
         """
-        Check if a given optical dataset has corresponding thermal bands.
-        
+        Determine whether a specified optical Landsat dataset includes corresponding
+        thermal bands (i.e. whether a matching TOA thermal dataset exists).
+
         Parameters
         ----------
-        optical_data : str
-            Optical dataset code (e.g., 'L8_SR', 'L1_RAW')
-            
+        optical_data : str. Optical dataset key as used in :pydata:`OPTICAL_DATASETS`
+
         Returns
         -------
         bool
-            True if thermal bands are available, False otherwise
+            ``True`` if a corresponding thermal dataset is available and ``False``
+            if not (for example Landsat 1-3 MSS or an unknown/unsupported key).
+
+        Notes
+        -----
+        - Landsat 1-3 MSS sensors did not include thermal bands and therefore
+          will always return ``False`` for keys ``'L1_RAW'``, ``'L2_RAW'`` and
+          ``'L3_RAW'``.
+        - For other SR datasets the method performs a simple string replacement
+          of the suffix ``'_SR'`` with ``'_TOA'`` and checks for the presence
+          of that key in :pydata:`THERMAL_DATASETS`.
+
+        Examples
+        --------
+        >>> rd = Reflectance_Data()
+        >>> rd.has_thermal_capability('L8_SR')
+        True
+        >>> rd.has_thermal_capability('L2_RAW')
+        False
         """
         # Landsat 1-3 MSS sensors did not have thermal bands
         if optical_data in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
@@ -177,28 +195,31 @@ class Reflectance_Data:
             >>> masked_image = get_landsat.mask_landsat_sr(image)
             """
             qa = image.select('QA_PIXEL')
-            #Deterministic bits ---
+            #Deterministic bits
+            #fyi, (bit 3 is set to 1) and so on
             cloud_bit = 1 << 3
             shadow_bit = 1 << 4
+            cirrus_bit = 1 << 2
+            
             cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0)
             shadow_mask = qa.bitwiseAnd(shadow_bit).eq(0)
+            cirrus_mask = qa.bitwiseAnd(cirrus_bit).eq(0)
             #Confidence bits ---
             cloud_conf = qa.rightShift(8).bitwiseAnd(3)     # Bits 8–9
             shadow_conf = qa.rightShift(10).bitwiseAnd(3)   # Bits 10–11
-            #snow_conf = qa.rightShift(12).bitwiseAnd(3)     # Bits 12–13
             cirrus_conf = qa.rightShift(14).bitwiseAnd(3)   # Bits 14–15
             #Keep pixels below thresholds
             conf_mask = (cloud_conf.lt(cloud_conf_thresh)
                         .And(shadow_conf.lt(shadow_conf_thresh))
-                        #.And(snow_conf.lt(snow_conf_thresh))
                         .And(cirrus_conf.lt(cirrus_conf_thresh)))
             #Final mask
-            final_mask = cloud_mask.And(shadow_mask).And(conf_mask)
+            final_mask = cloud_mask.And(shadow_mask).And(cirrus_mask).And(conf_mask)
             return image.updateMask(final_mask).copyProperties(image, image.propertyNames())
     #Functions to rename Landsat bands 
     def rename_landsat_bands(self, image, sensor_type):
         """
         Standardize Landsat Surface Reflectance (SR) band names based on sensor type. From 'SR_B*' or 'B*' to 'NIR', 'GREEN', etc.
+        Used in get multispectral data function
 
         Parameters
         ----------
@@ -210,8 +231,10 @@ class Reflectance_Data:
         ee.Image : Image with standardized band names
 
         Example
-        --------
-
+        -------
+        >>> rd = Reflectance_Data()
+        >>> img8 = ee.Image('LANDSAT/LC08/C02/T1_L2/LC08_044034_20200716')
+        >>> renamed8 = rd.rename_landsat_bands(img8, 'L8')
         """
         if sensor_type in ['L4','L5', 'L7']:
             # Landsat 5/7 SR bands
@@ -246,6 +269,18 @@ class Reflectance_Data:
         Returns
         -------
         ee.Image : Image with floating point, corresponding to surface reflectance value
+        
+        References
+        -------
+        https://www.usgs.gov/faqs/how-do-i-use-a-scale-factor-landsat-level-2-science-products
+        
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        #Implementation on image collection
+        >>> collection = (collection.map(lambda img: get_landsat.apply_scale_factors(img))
+        #Implementatio on Image
+        >>> masked_image = get_landsat.apply_scale_factors(image)
         """        
         optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
         #thermal_bands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
@@ -273,6 +308,18 @@ class Reflectance_Data:
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 
+        ...                                                         cloud_cover=30, aoi_cloud_cover=50)
         """
         #Helper function so that the user only input year or specific date range
         def parse_year_or_date(date_input, is_start=True):
@@ -381,24 +428,36 @@ class Reflectance_Data:
     def get_thermal_bands(self, aoi, start_date, end_date, thermal_data = 'L8_TOA', cloud_cover=30,
                         verbose=True, compute_detailed_stats=True):
         """
-        Get the thermal bands from landsat TOA data
-    
+       Get image collection for Landsat 5-9 TOA data with detailed information logging to retrive thermal band only.
+
         Parameters
         ----------
         aoi :  ee.FeatureCollection. Area of interest.
         start_date : str. Start date in format 'YYYY-MM-DD' or year.
         end_date : str. End date in format 'YYYY-MM-DD' or year.
-        optical_data : str. Dataset type: 'L5_SR', 'L7_SR', 'L8_SR', 'L9_SR'.
+        thermal_data : str. Dataset type: i.e 'L5_TOA', 'L8_TOA', 'L8_SR', 'L9_TOA'.
         cloud_cover : int. Maximum cloud cover percentage on land (default: 30).
         verbose : bool. Print detailed information about the collection (default: True).
         compute_detailed_stats : bool
             If True, compute detailed statistics 
             If False, return only basic information (default: True).
-            
+
         Returns
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 
+        ...                                                         cloud_cover=30, aoi_cloud_cover=50)
         """
         #Helper function to parse the date so that the user can only input the year
         def parse_year_or_date(date_input, is_start=True):
@@ -498,7 +557,7 @@ class Reflectance_Stats:
     def __init__(self, log_level=logging.INFO):
         """
         Initialize the ReflectanceStats object and set up a class-specific logger.
-        Ensure Earth Engine is initialized lazily (avoids import-time failures).
+        Ensure Earth Engine is initialized 
         """
         # Ensure Earth Engine is initialized when first used (raises helpful error if not)
         ensure_ee_initialized()
@@ -509,7 +568,41 @@ class Reflectance_Stats:
         self.logger.info("Reflectance Stats initialized.")
     def get_collection_statistics(self, collection, compute_stats=True, print_report=False):
         """
-        Get comprehensive statistics about an image collection.
+        Get comprehensive statistics about an Earth Engine image collection retrival.
+
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            The Earth Engine ImageCollection (from get multispectral function).
+        compute_stats : bool, optional
+            If True (default) the function will call ``getInfo()`` to compute
+            detailed statistics (counts, cloud cover numbers, dates, WRS tiles).
+            If False the function returns a minimal, server-side friendly
+            summary object and avoids client-side network calls.
+        print_report : bool, optional
+            If True the function will print formatted report of collection retrival
+            (default: False).
+
+        Returns
+        -------
+        dict
+            A dictionary containing either detailed statistics (when
+            ``compute_stats=True``) or a lightweight summary with the server
+            side objects (when ``compute_stats=False``). Typical keys when
+            detailed stats are returned:
+            - 'total_images'
+            - 'date_range'
+            - 'cloud_cover' (dict with min/max/mean/values)
+            - 'aoi_cloud_cover' (dict with min/max/mean/values, if available)
+            - 'path_row_tiles'
+            - 'unique_tiles'
+            - 'individual_dates'
+            - 'Scene_ids'
+
+        Example
+        -------
+        >>> stats = Reflectance_Stats().get_collection_statistics(collection, compute_stats=True)
+        >>> print(stats['total_images'], stats['date_range'])
         """
         #Get the number of image used 
         try:
@@ -659,4 +752,252 @@ class Reflectance_Stats:
                 print(f"... and {len(stats['Scene_ids']) - 10} more scenes")
             print()
         
-        print("="*60)        
+        print("="*60)
+#Class for converting image collection into single image either using mosaic or temporal compositing
+class final_Image:
+    """
+    Class for combining image collections to get the final images.
+    Supports single-date mosaics and time series compositing.
+    """
+    
+    def __init__(self, log_level=logging.INFO):
+        """
+        Initialize the final_Image object and set up a class-specific logger.
+        """
+        ensure_ee_initialized()
+        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(log_level)
+        self.logger.info("final_Image initialized.")
+    #Quality mosaic for stacking multiple scene and then clip them
+    #Quality mosaic use all the pixel value in a single scene
+    def get_quality_mosaic(self, collection, aoi, quality_band='NDVI', verbose=True):
+        """
+        Create a mosaic that selects the best available pixels across the AOI.
+        Uses qualityMosaic to automatically select pixels with highest quality metric.
+        
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            Filtered image collection from Reflectance_Data
+        aoi : ee.Geometry or ee.FeatureCollection
+            Area of interest for clipping
+        quality_band : str
+            Band to use for quality assessment. Options:
+            - 'NDVI': Normalized Difference Vegetation Index (Select pixels with high NDVI value)
+            - 'NIR': Near-infrared band (general purpose, select pixel with highest NIR reflectance)
+            - 'BLUE': Blue band (inverted - selects clearest pixels, since lower blue value correspond to haze)
+        verbose : bool
+            If True, log detailed information (default: True)
+            
+        Returns
+        -------
+        ee.Image
+            Quality mosaic image clipped to AOI with best available pixels
+            
+        Example
+        -------
+        >>> data_fetcher = Reflectance_Data()
+        >>> collection, stats = data_fetcher.get_optical_data(aoi, 2020, 2020, 'L8_SR')
+        >>> image_processor = final_Image()
+        >>> quality_image = image_processor.get_quality_mosaic(collection, aoi, quality_band='NDVI')
+        """
+        #safety checks, make sure the AOI is ee feature collection
+        if isinstance(aoi, ee.FeatureCollection):
+            geometry = aoi.geometry()
+        else:
+            geometry = aoi
+        
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create quality mosaic")
+            self.logger.info(f"Creating quality mosaic from {size} images using {quality_band} as quality metric")
+        
+        #Add quality band based on selection
+        def add_quality_band(img):
+            if quality_band == 'NDVI':
+                #NDVI: (NIR - RED) / (NIR + RED)
+                ndvi = img.normalizedDifference(['NIR', 'RED']).rename('quality')
+                return img.addBands(ndvi)
+            elif quality_band == 'NIR':
+                #If NIR band is selected (higher, better)
+                return img.addBands(img.select('NIR').rename('quality'))
+            elif quality_band == 'BLUE':
+                #Invert BLUE band (lower blue = clearer, so negate it)
+                inverted_blue = img.select('BLUE').multiply(-1).rename('quality')
+                return img.addBands(inverted_blue)
+            else:
+                # Use specified band directly
+                return img.addBands(img.select(quality_band).rename('quality'))
+        
+        #Add quality band to collection
+        collection_with_quality = collection.map(add_quality_band)
+        #automatically selects pixels with highest quality values
+        mosaic = collection_with_quality.qualityMosaic('quality')
+        #Remove the quality band from output
+        original_bands = collection.first().bandNames()
+        mosaic = mosaic.select(original_bands)
+        # Clip to AOI
+        clipped = mosaic.clip(geometry)
+        
+        if verbose:
+            self.logger.info(f"Quality mosaic created covering AOI with best available pixels")
+        
+        # Add metadata
+        first_img = collection.first()
+        last_img = collection.sort('system:time_start', False).first()
+        
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        
+        clipped = clipped.set({
+            'mosaic_type': 'quality_mosaic',
+            'quality_metric': quality_band,
+            'date_range_start': start_date,
+            'date_range_end': end_date,
+            'image_count': collection.size()
+        })
+        
+        # Cast to ee.Image
+        clipped = ee.Image(clipped)
+        
+        if verbose:
+            start_str = start_date.getInfo()
+            end_str = end_date.getInfo()
+            self.logger.info(f"Mosaic date range: {start_str} to {end_str}")
+        
+        return clipped
+    #Temporal composite computes statistics across pixels
+    #logic behind cloud 'removal' is that cloud typically have higher pixel value due to high reflectance,
+    #thus when median composite is used cloud get 'remove' from the final image
+    def get_temporal_composite(self, collection, aoi, reducer='median', 
+                              add_band_stats=False, verbose=True):
+        """
+        Create a temporal composite from image collection using specified reducer.
+        Output is always clipped to the AOI.
+        
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            Filtered image collection from Reflectance_Data
+        aoi : ee.Geometry or ee.FeatureCollection
+            Area of interest for clipping
+        reducer : str or ee.Reducer
+            Reduction method: 'median', 'mean', 'min', 'max', 'percentile_'
+            (default: 'median')
+        add_band_stats : bool
+            If True, add additional bands with stdDev and count (default: False)
+        verbose : bool
+            If True, log detailed information (default: True)
+            
+        Returns
+        -------
+        ee.Image
+            Composite image clipped to AOI with original band names (NIR, RED, etc.)
+            
+        Example
+        -------
+        >>> data_fetcher = Reflectance_Data()
+        >>> collection, stats = data_fetcher.get_optical_data(aoi, 2020, 2020, 'L8_SR')
+        >>> image_processor = final_Image()
+        >>> composite = image_processor.get_temporal_composite(collection, aoi, reducer='median')
+        """
+        if isinstance(aoi, ee.FeatureCollection):
+            geometry = aoi.geometry()
+        else:
+            geometry = aoi
+        
+        # Get original band names before reduction
+        original_bands = collection.first().bandNames()
+        
+        #Get reducer
+        if isinstance(reducer, str):
+            reducer_lower = reducer.lower()
+            if reducer_lower == 'median':
+                ee_reducer = ee.Reducer.median()
+            elif reducer_lower == 'mean':
+                ee_reducer = ee.Reducer.mean()
+            elif reducer_lower == 'min':
+                ee_reducer = ee.Reducer.min()
+            elif reducer_lower == 'max':
+                ee_reducer = ee.Reducer.max()
+            elif reducer_lower.startswith('percentile_'):
+                percentile = int(reducer_lower.split('_')[1])
+                ee_reducer = ee.Reducer.percentile([percentile])
+            else:
+                raise ValueError(f"Unsupported reducer: {reducer}")
+        else:
+            ee_reducer = reducer
+        
+        # Check collection size - only if verbose to avoid unnecessary getInfo()
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create composite")
+            self.logger.info(f"Creating {reducer} composite from {size} images")
+        
+        # Create composite
+        if add_band_stats:
+            # Combine multiple reducers
+            composite = collection.reduce(ee.Reducer.median()
+                                        .combine(ee.Reducer.stdDev(), '', True)
+                                        .combine(ee.Reducer.count(), '', True))
+            # For stats, keep the suffixes but rename main bands
+            # Get band names after reduction
+            composite_bands = composite.bandNames()
+            
+            # Create new names: main bands without suffix, stats bands with suffix
+            def rename_band(band_name):
+                band_str = ee.String(band_name)
+                # Check if it's a main band (ends with _median, _mean, etc.)
+                is_main = band_str.match('.*_(median|mean|min|max|p\\d+)$')
+                # Check if it's a stdDev band
+                is_stddev = band_str.match('.*_stdDev$')
+                # Check if it's a count band
+                is_count = band_str.match('.*_count$')
+                
+                # For main bands, remove the suffix
+                new_name = ee.Algorithms.If(
+                    is_main,
+                    band_str.replace('_(median|mean|min|max|p\\d+)$', ''),
+                    band_name  # Keep stdDev and count suffixes
+                )
+                return new_name
+            
+            new_band_names = composite_bands.map(rename_band)
+            composite = composite.rename(new_band_names)
+        else:
+            composite = collection.reduce(ee_reducer)
+            # Rename bands to remove reducer suffix (e.g., 'NIR_median' -> 'NIR')
+            composite = composite.rename(original_bands)
+        
+        # Clip to AOI (always required)
+        composite = composite.clip(geometry)
+        
+        if verbose:
+            self.logger.info("Composite clipped to AOI")
+        
+        # Add metadata - use server-side operations, avoid getInfo()
+        first_img = collection.first()
+        last_img = collection.sort('system:time_start', False).first()
+        
+        # Store dates as server-side strings to avoid getInfo() calls
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        size_server = collection.size()
+        
+        composite = composite.set({
+            'composite_start_date': start_date,
+            'composite_end_date': end_date,
+            'composite_count': size_server,
+            'composite_reducer': str(reducer)
+        })
+        
+        if verbose:
+            #Only call the client side info if needed
+            start_date_str = start_date.getInfo()
+            end_date_str = end_date.getInfo()
+            self.logger.info(f"Composite created from {start_date_str} to {end_date_str}")
+        
+        return composite
