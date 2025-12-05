@@ -129,17 +129,35 @@ class Reflectance_Data:
     
     def has_thermal_capability(self, optical_data):
         """
-        Check if a given optical dataset has corresponding thermal bands.
-        
+        Determine whether a specified optical Landsat dataset includes corresponding
+        thermal bands (i.e. whether a matching TOA thermal dataset exists).
+
         Parameters
         ----------
-        optical_data : str
-            Optical dataset code (e.g., 'L8_SR', 'L1_RAW')
-            
+        optical_data : str. Optical dataset key as used in :pydata:`OPTICAL_DATASETS`
+
         Returns
         -------
         bool
-            True if thermal bands are available, False otherwise
+            ``True`` if a corresponding thermal dataset is available and ``False``
+            if not (for example Landsat 1-3 MSS or an unknown/unsupported key).
+
+        Notes
+        -----
+        - Landsat 1-3 MSS sensors did not include thermal bands and therefore
+          will always return ``False`` for keys ``'L1_RAW'``, ``'L2_RAW'`` and
+          ``'L3_RAW'``.
+        - For other SR datasets the method performs a simple string replacement
+          of the suffix ``'_SR'`` with ``'_TOA'`` and checks for the presence
+          of that key in :pydata:`THERMAL_DATASETS`.
+
+        Examples
+        --------
+        >>> rd = Reflectance_Data()
+        >>> rd.has_thermal_capability('L8_SR')
+        True
+        >>> rd.has_thermal_capability('L2_RAW')
+        False
         """
         # Landsat 1-3 MSS sensors did not have thermal bands
         if optical_data in ['L1_RAW', 'L2_RAW', 'L3_RAW']:
@@ -201,6 +219,7 @@ class Reflectance_Data:
     def rename_landsat_bands(self, image, sensor_type):
         """
         Standardize Landsat Surface Reflectance (SR) band names based on sensor type. From 'SR_B*' or 'B*' to 'NIR', 'GREEN', etc.
+        Used in get multispectral data function
 
         Parameters
         ----------
@@ -212,8 +231,10 @@ class Reflectance_Data:
         ee.Image : Image with standardized band names
 
         Example
-        --------
-
+        -------
+        >>> rd = Reflectance_Data()
+        >>> img8 = ee.Image('LANDSAT/LC08/C02/T1_L2/LC08_044034_20200716')
+        >>> renamed8 = rd.rename_landsat_bands(img8, 'L8')
         """
         if sensor_type in ['L4','L5', 'L7']:
             # Landsat 5/7 SR bands
@@ -248,6 +269,18 @@ class Reflectance_Data:
         Returns
         -------
         ee.Image : Image with floating point, corresponding to surface reflectance value
+        
+        References
+        -------
+        https://www.usgs.gov/faqs/how-do-i-use-a-scale-factor-landsat-level-2-science-products
+        
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        #Implementation on image collection
+        >>> collection = (collection.map(lambda img: get_landsat.apply_scale_factors(img))
+        #Implementatio on Image
+        >>> masked_image = get_landsat.apply_scale_factors(image)
         """        
         optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
         #thermal_bands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
@@ -275,6 +308,18 @@ class Reflectance_Data:
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 
+        ...                                                         cloud_cover=30, aoi_cloud_cover=50)
         """
         #Helper function so that the user only input year or specific date range
         def parse_year_or_date(date_input, is_start=True):
@@ -383,24 +428,36 @@ class Reflectance_Data:
     def get_thermal_bands(self, aoi, start_date, end_date, thermal_data = 'L8_TOA', cloud_cover=30,
                         verbose=True, compute_detailed_stats=True):
         """
-        Get the thermal bands from landsat TOA data
-    
+       Get image collection for Landsat 5-9 TOA data with detailed information logging to retrive thermal band only.
+
         Parameters
         ----------
         aoi :  ee.FeatureCollection. Area of interest.
         start_date : str. Start date in format 'YYYY-MM-DD' or year.
         end_date : str. End date in format 'YYYY-MM-DD' or year.
-        optical_data : str. Dataset type: 'L5_SR', 'L7_SR', 'L8_SR', 'L9_SR'.
+        thermal_data : str. Dataset type: i.e 'L5_TOA', 'L8_TOA', 'L8_SR', 'L9_TOA'.
         cloud_cover : int. Maximum cloud cover percentage on land (default: 30).
         verbose : bool. Print detailed information about the collection (default: True).
         compute_detailed_stats : bool
             If True, compute detailed statistics 
             If False, return only basic information (default: True).
-            
+
         Returns
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 
+        ...                                                         cloud_cover=30, aoi_cloud_cover=50)
         """
         #Helper function to parse the date so that the user can only input the year
         def parse_year_or_date(date_input, is_start=True):
@@ -500,7 +557,7 @@ class Reflectance_Stats:
     def __init__(self, log_level=logging.INFO):
         """
         Initialize the ReflectanceStats object and set up a class-specific logger.
-        Ensure Earth Engine is initialized lazily (avoids import-time failures).
+        Ensure Earth Engine is initialized 
         """
         # Ensure Earth Engine is initialized when first used (raises helpful error if not)
         ensure_ee_initialized()
@@ -511,7 +568,41 @@ class Reflectance_Stats:
         self.logger.info("Reflectance Stats initialized.")
     def get_collection_statistics(self, collection, compute_stats=True, print_report=False):
         """
-        Get comprehensive statistics about an image collection.
+        Get comprehensive statistics about an Earth Engine image collection retrival.
+
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            The Earth Engine ImageCollection (from get multispectral function).
+        compute_stats : bool, optional
+            If True (default) the function will call ``getInfo()`` to compute
+            detailed statistics (counts, cloud cover numbers, dates, WRS tiles).
+            If False the function returns a minimal, server-side friendly
+            summary object and avoids client-side network calls.
+        print_report : bool, optional
+            If True the function will print formatted report of collection retrival
+            (default: False).
+
+        Returns
+        -------
+        dict
+            A dictionary containing either detailed statistics (when
+            ``compute_stats=True``) or a lightweight summary with the server
+            side objects (when ``compute_stats=False``). Typical keys when
+            detailed stats are returned:
+            - 'total_images'
+            - 'date_range'
+            - 'cloud_cover' (dict with min/max/mean/values)
+            - 'aoi_cloud_cover' (dict with min/max/mean/values, if available)
+            - 'path_row_tiles'
+            - 'unique_tiles'
+            - 'individual_dates'
+            - 'Scene_ids'
+
+        Example
+        -------
+        >>> stats = Reflectance_Stats().get_collection_statistics(collection, compute_stats=True)
+        >>> print(stats['total_images'], stats['date_range'])
         """
         #Get the number of image used 
         try:
