@@ -13,7 +13,10 @@ logging.basicConfig(
 # Module 1: Cloudless Image Mosaic
 ## System Response 1.2: Search and Filter Imagery
 class Reflectance_Data:
-    """Class for fetching and pre-processing Landsat image collection from Google Earth Engine API."""
+    """
+    Class for fetching and pre-processing Landsat image collections
+    from the Google Earth Engine API.
+    """
     #Define the optical datasets. The band reflectances used is from Collection 2 Surface Reflectancce Data
     OPTICAL_DATASETS = {
         'L1_RAW': {
@@ -118,6 +121,11 @@ class Reflectance_Data:
         """
         Initialize the ReflectanceData object and set up a class-specific logger.
         Ensure Earth Engine is initialized lazily (avoids import-time failures).
+
+        Parameters
+        ----------
+        log_level : int, optional
+        Logging level to apply to the class logger (default: logging.INFO).
         """
         # Ensure Earth Engine is initialized when first used (raises helpful error if not)
         ensure_ee_initialized()
@@ -150,68 +158,61 @@ class Reflectance_Data:
         return thermal_data in self.THERMAL_DATASETS
     #Function to mask clouds, shadow, and cirrus. Using QA Bands
     def mask_landsat_sr(self, image,cloud_conf_thresh=2, shadow_conf_thresh=2, cirrus_conf_thresh=2):
-            """
-            Mask clouds, shadows and cirrus for Landsat Collection 2 SR using QA_PIXEL band.
-                
-            Parameters:
-            -----------
-            image : ee.Image: Landsat SR image
-            cloud_conf_thresh : int. Cloud confidence threshold (0=None, 1=Low, 2=Med, 3=High)
-            shadow_conf_thresh : int. Shadow confidence threshold (0=None, 1=Low, 2=Med, 3=High)
-            cirrus_conf_thresh : int. Cirrus confidence threshold (0=None, 1=Low, 2=Med, 3=High)
-
-            Returns:
-            --------
-            ee.Image : Masked image (ee.)
-
-            References
-            --------
-            https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands 
-
-            Example
-            --------
-            >>> get_landsat = Reflectance_Data()
-            #Implementation on image collection
-            >>> collection = (collection.map(lambda img: get_landsat.mask_landsat_sr(img))
-            #Implementatio on Image
-            >>> masked_image = get_landsat.mask_landsat_sr(image)
-            """
-            qa = image.select('QA_PIXEL')
-            #Deterministic bits ---
-            cloud_bit = 1 << 3
-            shadow_bit = 1 << 4
-            cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0)
-            shadow_mask = qa.bitwiseAnd(shadow_bit).eq(0)
-            #Confidence bits ---
-            cloud_conf = qa.rightShift(8).bitwiseAnd(3)     # Bits 8–9
-            shadow_conf = qa.rightShift(10).bitwiseAnd(3)   # Bits 10–11
-            #snow_conf = qa.rightShift(12).bitwiseAnd(3)     # Bits 12–13
-            cirrus_conf = qa.rightShift(14).bitwiseAnd(3)   # Bits 14–15
-            #Keep pixels below thresholds
-            conf_mask = (cloud_conf.lt(cloud_conf_thresh)
-                        .And(shadow_conf.lt(shadow_conf_thresh))
-                        #.And(snow_conf.lt(snow_conf_thresh))
-                        .And(cirrus_conf.lt(cirrus_conf_thresh)))
-            #Final mask
-            final_mask = cloud_mask.And(shadow_mask).And(conf_mask)
-            return image.updateMask(final_mask).copyProperties(image, image.propertyNames())
-    #Functions to rename Landsat bands 
-    def rename_landsat_bands(self, image, sensor_type):
         """
-        Standardize Landsat Surface Reflectance (SR) band names based on sensor type. From 'SR_B*' or 'B*' to 'NIR', 'GREEN', etc.
+        Mask clouds, cloud shadows, and cirrus from Landsat Surface Reflectance images
+        using the QA_PIXEL band.
 
         Parameters
         ----------
-        image : ee.Image. Landsat SR image
-        sensor_type : str. Sensor type ('L5', 'L7', 'L8', 'L9')
+        image : ee.Image
+            Landsat SR image.
+        cloud_conf_thresh : int, optional
+            Confidence threshold for clouds (default: 2).
+        shadow_conf_thresh : int, optional
+            Confidence threshold for cloud shadows (default: 2).
+        cirrus_conf_thresh : int, optional
+            Confidence threshold for cirrus (default: 2).
 
         Returns
         -------
-        ee.Image : Image with standardized band names
+        ee.Image
+            Masked image with clouds, shadows, and cirrus removed.
+        """
+        qa = image.select('QA_PIXEL')
 
-        Example
-        --------
+        # Create masks based on confidence levels
+        cloud_mask = qa.bitwiseAnd(1 << 3).gte(cloud_conf_thresh)
+        shadow_mask = qa.bitwiseAnd(1 << 4).gte(shadow_conf_thresh)
+        cirrus_mask = qa.bitwiseAnd(1 << 5).gte(cirrus_conf_thresh)
 
+        # Combine masks
+        combined_mask = cloud_mask.Or(shadow_mask).Or(cirrus_mask)
+
+        # Invert mask to get clear pixels
+        final_mask = combined_mask.Not()
+
+        return image.updateMask(final_mask)
+    #Functions to rename Landsat bands 
+    def rename_landsat_bands(self, image, sensor_type):
+        """
+        Standardize Landsat SR band names based on sensor type.
+
+        Parameters
+        ----------
+        image : ee.Image
+            Landsat SR image.
+        sensor_type : str
+            Sensor type (e.g., 'L5', 'L7', 'L8', 'L9').
+
+        Returns
+        -------
+        ee.Image
+            Image with standardized band names.
+
+        Raises
+        ------
+        ValueError
+            If `sensor_type` is unsupported.
         """
         if sensor_type in ['L4','L5', 'L7']:
             # Landsat 5/7 SR bands
@@ -235,18 +236,18 @@ class Reflectance_Data:
     #function to implement Landsat Collection 2 Tier 1 SR scale factor
     def apply_scale_factors(self, image):
         """
-        Apply Landsat collection 2 scalling factors using the following formula: Digital Number (DN) * scale_factor + offset.
-        Allowing the user to get the data back to its original floating point value, a scale factor and offset.
+        Apply Landsat Collection 2 scaling factors to reflectances.
 
         Parameters
         ----------
-        image : ee.Image (Landsat SR image) with DN value
-        sensor_type : str. Sensor type ('L4', 'L5', 'L7', 'L8', 'L9')
+        image : ee.Image
+            Landsat SR image with DN values.
 
         Returns
         -------
-        ee.Image : Image with floating point, corresponding to surface reflectance value
-        """        
+        ee.Image
+            Image with floating point surface reflectance values.
+        """    
         optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
         #thermal_bands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
         return image.addBands(optical_bands, None, True)
@@ -255,24 +256,34 @@ class Reflectance_Data:
                         cloud_cover=30,
                         verbose=True, compute_detailed_stats=True):
         """
-        Get optical image collection for Landsat 1-9 SR data with detailed information logging.
+        Get optical image collection for Landsat 1-9 SR data with detailed logging.
 
         Parameters
         ----------
-        aoi :  ee.FeatureCollection. Area of interest.
-        start_date : str. Start date in format 'YYYY-MM-DD' or year.
-        end_date : str. End date in format 'YYYY-MM-DD' or year.
-        optical_data : str. Dataset type: i.e 'L5_SR', 'L7_SR', 'L8_SR', 'L9_SR'.
-        cloud_cover : int. Maximum cloud cover percentage on land (default: 30).
-        verbose : bool. Print detailed information about the collection (default: True).
-        compute_detailed_stats : bool
-            If True, compute detailed statistics 
-            If False, return only basic information (default: True).
+        aoi : ee.FeatureCollection
+            Area of interest.
+        start_date : str or int
+            Start date in 'YYYY-MM-DD' format or a year (YYYY).
+        end_date : str or int
+            End date in 'YYYY-MM-DD' format or a year (YYYY).
+        optical_data : str, optional
+            Dataset type (e.g., 'L5_SR', 'L7_SR', 'L8_SR', 'L9_SR'). Default is 'L8_SR'.
+        cloud_cover : int, optional
+            Maximum cloud cover percentage on land (default: 30).
+        verbose : bool, optional
+            If True, print detailed logging information (default: True).
+        compute_detailed_stats : bool, optional
+            If True, compute detailed collection statistics (default: True).
 
         Returns
         -------
-        tuple : (ee.ImageCollection, dict)
-            Filtered and preprocessed image collection with statistics.
+        tuple
+            A tuple (ee.ImageCollection, dict) containing the filtered and preprocessed
+            image collection and a dictionary of statistics.
+
+        Examples
+        --------
+        >>> coll, stats = get_optical_data(aoi, 2020, 2021, optical_data='L8_SR')
         """
         #Helper function so that the user only input year or specific date range
         def parse_year_or_date(date_input, is_start=True):
@@ -381,24 +392,29 @@ class Reflectance_Data:
     def get_thermal_bands(self, aoi, start_date, end_date, thermal_data = 'L8_TOA', cloud_cover=30,
                         verbose=True, compute_detailed_stats=True):
         """
-        Get the thermal bands from landsat TOA data
-    
+        Get the thermal bands from Landsat TOA data.
+
         Parameters
         ----------
-        aoi :  ee.FeatureCollection. Area of interest.
-        start_date : str. Start date in format 'YYYY-MM-DD' or year.
-        end_date : str. End date in format 'YYYY-MM-DD' or year.
-        optical_data : str. Dataset type: 'L5_SR', 'L7_SR', 'L8_SR', 'L9_SR'.
-        cloud_cover : int. Maximum cloud cover percentage on land (default: 30).
-        verbose : bool. Print detailed information about the collection (default: True).
-        compute_detailed_stats : bool
-            If True, compute detailed statistics 
-            If False, return only basic information (default: True).
-            
+        aoi : ee.FeatureCollection
+            Area of interest.
+        start_date : str or int
+            Start date in 'YYYY-MM-DD' format or a year (YYYY).
+        end_date : str or int
+            End date in 'YYYY-MM-DD' format or a year (YYYY).
+        thermal_data : str, optional
+            Thermal dataset (e.g., 'L8_TOA'). Default is 'L8_TOA'.
+        cloud_cover : int, optional
+            Maximum cloud cover percentage (default: 30).
+        verbose : bool, optional
+            If True, print detailed logging information (default: True).
+        compute_detailed_stats : bool, optional
+            If True, compute detailed statistics (default: True).
+
         Returns
         -------
-        tuple : (ee.ImageCollection, dict)
-            Filtered and preprocessed image collection with statistics.
+        tuple
+            (ee.ImageCollection, dict) filtered collection and stats.
         """
         #Helper function to parse the date so that the user can only input the year
         def parse_year_or_date(date_input, is_start=True):
@@ -493,23 +509,38 @@ class Reflectance_Data:
         }
 class Reflectance_Stats:
     """
-    Class for fetching image collection statistics
+    Class for fetching image collection statistics from Earth Engine.
     """
+
     def __init__(self, log_level=logging.INFO):
         """
-        Initialize the ReflectanceStats object and set up a class-specific logger.
-        Ensure Earth Engine is initialized lazily (avoids import-time failures).
-        """
-        # Ensure Earth Engine is initialized when first used (raises helpful error if not)
-        ensure_ee_initialized()
-        
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(log_level)
+        Initialize the Reflectance_Stats object.
 
-        self.logger.info("Reflectance Stats initialized.")
+        Parameters
+        ----------
+        log_level : int, optional
+            Logging level for the class logger (default: logging.INFO).
+        """
+
     def get_collection_statistics(self, collection, compute_stats=True, print_report=False):
         """
         Get comprehensive statistics about an image collection.
+
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            The image collection to analyze.
+        compute_stats : bool, optional
+            If True, compute full statistics immediately (default: True).
+            If False, return objects suitable for deferred computation.
+        print_report : bool, optional
+            If True, print a formatted report to stdout (default: False).
+
+        Returns
+        -------
+        dict
+            Dictionary with keys like 'total_images', 'date_range',
+            'cloud_cover', 'path_row_tiles', 'individual_dates', etc.
         """
         #Get the number of image used 
         try:
