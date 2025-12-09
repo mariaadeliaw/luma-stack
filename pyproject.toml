@@ -1,7 +1,7 @@
 [project]
-name = "epistemx"
+name = "luma_ge"
 version = "0.1.0"
-description = "A Streamlit application for the Epistem land cover mapping platform."
+description = "A Python package that serves as the geospatial engine for the Epistem Land Use Mapping for All (Luma) platform."
 dependencies = [
     "streamlit",
     "pandas",

@@ -1,11 +1,13 @@
 <!------------------------------------------------------------------------------------
     This document serves as a tags for connecting MS Visio Module Workflow with python codes 
     in this project
--------------------------------------------------------------------------------------> 
+------------------------------------------------------------------------------------->
 
 # Module 1: Cloudless Image Mosaic
-   ## System Response 1.1: Area of Interest Definition
-      └── src/epistemx                      
+
+## System Response 1.1: Area of Interest Definition
+
+      └── src/luma_ge
             └── shapefile_utils.py
                   ├── class shapefile_validator
                   │      ├── def validate_and_fix_geometry
@@ -18,39 +20,42 @@
                   │      └── def _final_validation
                   └── class EE_converter
                         ├── def __init__
-                        ├── def log  
-                        ├── def convert_aoi_gdf        
-                        └── def convert_roi_gdf        
+                        ├── def log
+                        ├── def convert_aoi_gdf
+                        └── def convert_roi_gdf
 
-   ## System Response 1.2: Search and Filter Imagery
-      └── src/epistemx                    
+## System Response 1.2: Search and Filter Imagery
+
+      └── src/luma_ge
             └── module_1.py
                   ├── class Reflectance_Data
                   │      ├── OPTICAL_DATASETS
-                  │      ├── THERMAL_DATASETS      
+                  │      ├── THERMAL_DATASETS
                   │      ├── def __init_
                   │      ├── def mask_landsat_sr
                   │      ├── def rename_landsat_bands
-                  │      ├── def apply_scale_factors 
+                  │      ├── def apply_scale_factors
                   │      ├── def get_optical_data
-                  │      │      └── def parse_year_or_date  
+                  │      │      └── def parse_year_or_date
                   │      └── def get_thermal_bands
                   │             ├── def parse_year_or_date
-                  │             └── def rename_thermal_band      
+                  │             └── def rename_thermal_band
                   ├── class Reflectance_Stats
                   │      ├── def __init_
                   │      ├── def get_collection_statistics
-                  │      └── def print_collection_report       
+                  │      └── def print_collection_report
 
-   ## System Response 1.3: Imagery Download
-      ├── pages/                     
+## System Response 1.3: Imagery Download
+
+      ├── pages/
             └── 1_Module_1_Generate_Image_Mosaic.py
                         └── line 389 - 443(if st.button("Start Export to Google Drive", type="primary"))
 
-
 # Module 2: Classification Scheme Definition
-   ## System Response 2.1a: Upload Classification Scheme
-      ├── src/epistemx                    
+
+## System Response 2.1a: Upload Classification Scheme
+
+      ├── src/luma_ge
             └── module_2.py
                   └── Class LULCSchemeClass
                          ├──  def process_csv_upload
@@ -58,9 +63,10 @@
                          ├──  def _generate_random_color
                          ├──  def _generate_distinct_colors
                          └──  def auto_detect_csv_columns
-   
-   ## System Response 2.1b: Manual Scheme Definition
-      ├── src/epistemx                     
+
+## System Response 2.1b: Manual Scheme Definition
+
+      ├── src/luma_ge
       │     └── module_2.py
       │           └── Class LULC_Scheme_Manager:
       │                  ├──  def validate_class_input
@@ -70,35 +76,40 @@
       │                  ├──  def edit_class
       │                  ├──  def delete_class
       │                  └──  def cancel_edit
-      └── pages/                     
+      └── pages/
             └── 2_Module_2_Classification_scheme.py
                         └── def render_manual_input_form
 
-   ## System Response 2.1c: Template Classification Scheme
-      └── src/epistemx                      
+## System Response 2.1c: Template Classification Scheme
+
+      └── src/luma_ge
             └── module_2.py
                   └── Class LULC_Scheme_Manager:
                          ├──  def load_default_scheme
                          └──  def get_default_scheme
 
-   ## System Response 2.2: Download classification scheme
-      ├── src/epistemx                      
+## System Response 2.2: Download classification scheme
+
+      ├── src/luma_ge
       │      └── module_2.py
       │            └── Class LULC_Scheme_Manager:
-      │                   └──  def get_csv_data  
-      └── pages/    
+      │                   └──  def get_csv_data
+      └── pages/
              └── 2_Module_2_Classification_scheme.py
                          └── st.download_button (line 265 - 285)
 
 # Module 3: Generate Region of Interest
-  ## System Response 3.1 Prerequisite Check
-      └── src/epistemx                      
+
+## System Response 3.1 Prerequisite Check
+
+      └── src/luma_ge
             └── module_3.py
                   └── Class input_check
-                         └──  def validateVariable   
+                         └──  def validateVariable
 
-  ## System Response 3.2 ROI Upload and content Verification
-      └── src/epistemx                      
+## System Response 3.2 ROI Upload and content Verification
+
+      └── src/luma_ge
             └── module_3.py
                   └── Class input_check
                          ├──  def LoadTrainData
@@ -109,10 +120,12 @@
                          ├──  def TrainDataRaw
                          ├──  def generate_report
                          ├──  def get_valid_training_data
-  ## System Response 3.3 On-screen Sampling 
-      └── src/epistemx                      
-            └── module_3.py 
-                  └── Class LULCSamplingTool          
+
+## System Response 3.3 On-screen Sampling
+
+      └── src/luma_ge
+            └── module_3.py
+                  └── Class LULCSamplingTool
                          ├──  def __init__
                          ├──  def  LoadAoiFromEe
                          ├──  def  CreateMap
@@ -133,11 +146,13 @@
                          ├──  def  UpdateTableDisplay
                          ├──  def  ExportToShapefile
                          └──  def  Display
-                         
+
+
 # Module 4: Region of Interest Separability Analysis
 
-   ## System Response 4.1 Separability Analysis
-      └── src/epistemx                      
+## System Response 4.1 Separability Analysis
+
+      └── src/luma_ge
             └── module_4.py
                   └── Class sample_quality
                          ├──  def get_display_property
@@ -150,67 +165,75 @@
                          ├──  def get_sample_pixel_stats_df
                          ├──  def check_class_separability
                          │        ├──  def _jeffries_matusita_distance
-                         │        └──  def transform_divergence                     
+                         │        └──  def transform_divergence
                          ├──  def get_separability_df
                          ├──  def lowest_separability
                          ├──  def separability_level
                          ├──  def sum_separability
                          └──  def print_analysis_summary
 
-   ## System Response 4.2 Sample Visualization
-      └── src/epistemx                    
+## System Response 4.2 Sample Visualization
+
+      └── src/luma_ge
             └── module_4_part2.py
                   └── Class spectral_plotter
                          ├──  def plot_histogram
                          ├──  def plot_boxplot
                          ├──  def interactive_scatter_plot
-                         ├──  def static_scatter_plot  
+                         ├──  def static_scatter_plot
                          │      └──  def add_elipse
-                         └──  def scatter_plot_3d                       
+                         └──  def scatter_plot_3d
 
 # Module 5: Covariates Definition
 
 # Module 6: Land Cover Classification
-   ## System Response 6.1 Prerequisites Check
-      ├── pages/                     
+
+## System Response 6.1 Prerequisites Check
+
+      ├── pages/
             └── 4_Module_6_Classification and LULC Creation.py
                     ├── with col1: (composite check: line 38 - 54)
                     └── with col2: (training data check: line 57 - 81)
 
+## System Response 6.2 Classification
 
-   ## System Response 6.2 Classification
-      └── src/epistemx                   
+      └── src/luma_ge
             └── module_6.py
                   ├── Class FeatureExtraction
                   │      ├──  def stratified_split
-                  │      └──  def random_split                            
+                  │      └──  def random_split
                   └── Class Generate_LULC:
                          ├── def hard_classification
                          └── def soft_classification
 
-   ## System Response 6.3 Model Evaluation
-      └── src/epistemx                      
+## System Response 6.3 Model Evaluation
+
+      └── src/luma_ge
            └── module_6.py
                  └── Class Generate_LULC:
                         ├── def get_feature_importance
-                        └── def evaluate_model    
+                        └── def evaluate_model
 
 # Module 7: Thematic Accuracy Assessment
-   ## System Response 7.1 Prerequisite check
-      └── pages/                     
+
+## System Response 7.1 Prerequisite check
+
+      └── pages/
             └── 5_Module_7_Thematic_Accuracy.py
                     └── line 34-40 (classification check)
 
-   ## System Response 7.2 Ground Reference Verification
-      └── pages/                     
+## System Response 7.2 Ground Reference Verification
+
+      └── pages/
             └── 5_Module_7_Thematic_Accuracy.py
                     └── line 50-106 (shapefile verification)
 
-   ## System Response 7.3 Thematic Accuracy Assessment
-      └── src/epistemx                   
+## System Response 7.3 Thematic Accuracy Assessment
+
+      └── src/luma_ge
             └── module_7.py
                   ├── Class Accuracy_Assessment
                   ├── def _calculate_accuracy_confidence_interval
-                  └── def thematic_assessment  
+                  └── def thematic_assessment
 
-# Module 8: 
+# Module 8:

@@ -82,7 +82,7 @@ def _find_service_account_file():
     # Check auth/ directory first (project-specific location)
     # Use absolute path to ensure it works regardless of working directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up from src/epistemx to project root
+    project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up from src/luma_ge to project root
     auth_dir = os.path.join(project_root, 'auth')
     
     print(f"DEBUG: Checking auth directory: {auth_dir}")
