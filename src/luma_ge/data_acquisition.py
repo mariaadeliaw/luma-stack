@@ -676,4 +676,363 @@ class Reflectance_Stats:
                 print(f"... and {len(stats['Scene_ids']) - 10} more scenes")
             print()
         
-        print("="*60)        
+        print("="*60)
+#Class for converting image collection into single image either using mosaic or temporal compositing
+class final_Image:
+    """
+    Class for combining image collections to get the final images.
+    Supports single-date mosaics and time series compositing.
+    """
+    
+    def __init__(self, log_level=logging.INFO):
+        """
+        Initialize the final_Image object and set up a class-specific logger.
+        """
+        ensure_ee_initialized()
+        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(log_level)
+        self.logger.info("final_Image initialized.")
+    #Function to calculate data coverage (pixel validity) within AOI
+    def calculate_data_coverage(self, composite_image, aoi, scale=30, max_pixels=1e9, verbose=True):
+        """
+        Calculate data coverage (valid pixels) percentage within AOI for a composite image.
+        This shows how much of your AOI has valid data after compositing.
+        
+        Parameters
+        ----------
+        composite_image : ee.Image
+            Composite image (from get_temporal_composite or get_quality_mosaic)
+        aoi : ee.Geometry or ee.FeatureCollection
+            Area of interest for coverage calculation
+        scale : int
+            Pixel scale for computation in meters (default: 30m for Landsat)
+        max_pixels : float
+            Maximum number of pixels to process (default: 1e9)
+        verbose : bool
+            If True, log detailed information (default: True)
+        
+        Returns
+        -------
+        dict
+            Dictionary containing:
+            - 'data_coverage_percent': Percentage of AOI with valid data (0-100)
+            - 'data_gap_percent': Percentage of AOI with missing/masked data (0-100)
+            - 'total_area_km2': Total AOI area in km²
+            - 'valid_area_km2': Area with valid data in km²
+            - 'gap_area_km2': Area with data gaps in km²
+        
+        Example
+        -------
+        >>> image_processor = final_Image()
+        >>> composite = image_processor.get_temporal_composite(collection, aoi)
+        >>> coverage = image_processor.calculate_data_coverage(composite, aoi)
+        >>> print(f"Data coverage: {coverage['data_coverage_percent']:.1f}%")
+        """
+        if isinstance(aoi, ee.FeatureCollection):
+            geometry = aoi.geometry()
+        else:
+            geometry = aoi
+        
+        if verbose:
+            self.logger.info("Calculating data coverage within AOI...")
+        
+        #Create a mask of valid (non-masked) pixels
+        #Use the first band to check for valid data (all bands should have same mask)
+        first_band = composite_image.select(0)
+        valid_mask = first_band.mask()
+        #Calculate pixel area
+        pixel_area = ee.Image.pixelArea()
+        #Total area in AOI
+        total_area = pixel_area.reduceRegion(reducer=ee.Reducer.sum(),geometry=geometry,scale=scale,maxPixels=max_pixels,
+            bestEffort=True,
+            tileScale=4
+        )
+        #Valid (unmasked) area
+        valid_area_img = valid_mask.multiply(pixel_area).rename('valid_area')
+        valid_area = valid_area_img.reduceRegion(reducer=ee.Reducer.sum(),geometry=geometry,scale=scale,maxPixels=max_pixels,
+            bestEffort=True,
+            tileScale=4
+        )
+        #Calculate coverage percentage
+        total = ee.Number(total_area.get('area')).max(1)  # Avoid division by zero
+        valid = ee.Number(valid_area.get('valid_area')).max(0)  # Default to 0 if null
+        coverage_percent = valid.multiply(100).divide(total)
+        gap_percent = ee.Number(100).subtract(coverage_percent)
+        # Clamp between 0-100 (make sure its 0 - 100)
+        coverage_percent = coverage_percent.max(0).min(100)
+        gap_percent = gap_percent.max(0).min(100)
+        #Get values (pull from server)
+        total_val = total.getInfo()
+        valid_val = valid.getInfo()
+        coverage_val = coverage_percent.getInfo()
+        gap_val = gap_percent.getInfo()
+        #Convert to km²
+        total_km2 = total_val / 1e6
+        valid_km2 = valid_val / 1e6
+        gap_km2 = (total_val - valid_val) / 1e6
+        #Data logging if needed
+        if verbose:
+            self.logger.info(f"Data coverage: {coverage_val:.1f}% ({valid_km2:.2f} km² of {total_km2:.2f} km²)")
+            self.logger.info(f"Data gaps: {gap_val:.1f}% ({gap_km2:.2f} km²)")
+        return {
+            'data_coverage_percent': round(coverage_val, 2),
+            'data_gap_percent': round(gap_val, 2),
+            'total_area_km2': round(total_km2, 2),
+            'valid_area_km2': round(valid_km2, 2),
+            'gap_area_km2': round(gap_km2, 2)
+        }
+    #Quality mosaic for stacking multiple scene and then clip them. This procedure stacked all of the imagery regardless of the pixel value
+    def get_quality_mosaic(self, collection, aoi, quality_band='NDVI', 
+                          calculate_coverage=False, coverage_scale=30, verbose=True):
+        """
+        Create a mosaic that selects the best available pixels across the AOI.
+        Uses qualityMosaic to automatically select pixels with highest quality metric.
+        
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            Filtered image collection from Reflectance_Data
+        aoi : ee.Geometry or ee.FeatureCollection
+            Area of interest for clipping
+        quality_band : str
+            Band to use for quality assessment. Options:
+            - 'NDVI': Normalized Difference Vegetation Index (Select pixels with high NDVI value)
+            - 'NIR': Near-infrared band (general purpose, select pixel with highest NIR reflectance)
+            - 'BLUE': Blue band (inverted - selects clearest pixels, since lower blue value correspond to haze)
+        calculate_coverage : bool
+            If True, calculate data coverage within AOI (default: False)
+            Note: This triggers a client-side computation and may be slow for large areas
+        coverage_scale : int
+            Pixel scale in meters for coverage calculation (default: 30m)
+            Use larger values (90m+) for faster computation on large areas
+        verbose : bool
+            If True, log detailed information (default: True)
+            
+        Returns
+        -------
+        tuple : (ee.Image, dict) if calculate_coverage=True, else ee.Image
+            - Quality mosaic image clipped to AOI with best available pixels
+            - Coverage statistics dict (only if calculate_coverage=True)
+            
+        Example
+        -------
+        >>> data_fetcher = Reflectance_Data()
+        >>> collection, stats = data_fetcher.get_optical_data(aoi, 2020, 2020, 'L8_SR')
+        >>> image_processor = final_Image()
+        >>> quality_image = image_processor.get_quality_mosaic(collection, aoi, quality_band='NDVI')
+        >>> # With coverage calculation
+        >>> quality_image, coverage = image_processor.get_quality_mosaic(
+        ...     collection, aoi, quality_band='NDVI', calculate_coverage=True
+        ... )
+        """
+        #safety checks, make sure the AOI is ee feature collection
+        if isinstance(aoi, ee.FeatureCollection):
+            geometry = aoi.geometry()
+        else:
+            geometry = aoi
+        
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create quality mosaic")
+            self.logger.info(f"Creating quality mosaic from {size} images using {quality_band} as quality metric")
+        
+        #Add quality band based on selection
+        def add_quality_band(img):
+            if quality_band == 'NDVI':
+                #NDVI: (NIR - RED) / (NIR + RED)
+                ndvi = img.normalizedDifference(['NIR', 'RED']).rename('quality')
+                return img.addBands(ndvi)
+            elif quality_band == 'NIR':
+                #If NIR band is selected (higher, better)
+                return img.addBands(img.select('NIR').rename('quality'))
+            elif quality_band == 'BLUE':
+                #Invert BLUE band (lower blue = clearer, so negate it)
+                inverted_blue = img.select('BLUE').multiply(-1).rename('quality')
+                return img.addBands(inverted_blue)
+            else:
+                # Use specified band directly
+                return img.addBands(img.select(quality_band).rename('quality'))
+        
+        #Add quality band to collection
+        collection_with_quality = collection.map(add_quality_band)
+        #automatically selects pixels with highest quality values
+        mosaic = collection_with_quality.qualityMosaic('quality')
+        #Remove the quality band from output
+        original_bands = collection.first().bandNames()
+        mosaic = mosaic.select(original_bands)
+        # Clip to AOI
+        clipped = mosaic.clip(geometry)
+        
+        if verbose:
+            self.logger.info(f"Quality mosaic created covering AOI with best available pixels")
+        
+        # Add metadata
+        first_img = collection.first()
+        last_img = collection.sort('system:time_start', False).first()
+        
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        
+        clipped = clipped.set({
+            'mosaic_type': 'quality_mosaic',
+            'quality_metric': quality_band,
+            'date_range_start': start_date,
+            'date_range_end': end_date,
+            'image_count': collection.size()
+        })
+        
+        # Cast to ee.Image
+        clipped = ee.Image(clipped)
+        
+        if verbose:
+            start_str = start_date.getInfo()
+            end_str = end_date.getInfo()
+            self.logger.info(f"Mosaic date range: {start_str} to {end_str}")
+        
+        # Calculate data coverage if requested
+        if calculate_coverage:
+            coverage_stats = self.calculate_data_coverage(
+                clipped, aoi, scale=coverage_scale, verbose=verbose
+            )
+            return clipped, coverage_stats
+        else:
+            return clipped
+    #Temporal composite computes statistics across pixels
+    #logic behind cloud 'removal' is that cloud typically have higher pixel value due to high reflectance,
+    #thus when median composite is used cloud get 'remove' from the final image
+    def get_temporal_composite(self, collection, aoi, reducer='median', 
+                              add_band_stats=False, calculate_coverage=False, 
+                              coverage_scale=30, verbose=True):
+        """
+        Create a temporal composite from image collection using specified reducer.
+        Output is always clipped to the AOI.
+        
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            Filtered image collection from Reflectance_Data
+        aoi : ee.Geometry or ee.FeatureCollection
+            Area of interest for clipping
+        reducer : str or ee.Reducer
+            Reduction method: 'median', 'mean', 'min', 'max', 'percentile_'
+            (default: 'median')
+        add_band_stats : bool
+            If True, add additional bands with stdDev and count (default: False)
+        calculate_coverage : bool
+            If True, calculate data coverage within AOI (default: False)
+            Note: This triggers a client-side computation and may be slow for large areas
+        coverage_scale : int
+            Pixel scale in meters for coverage calculation (default: 30m)
+            Use larger values (90m+) for faster computation on large areas
+        verbose : bool
+            If True, log detailed information (default: True)
+            
+        Returns
+        -------
+        tuple : (ee.Image, dict) if calculate_coverage=True, else ee.Image
+            - Composite image clipped to AOI with original band names (NIR, RED, etc.)
+            - Coverage statistics dict (only if calculate_coverage=True)
+            
+        Example
+        -------
+        >>> data_fetcher = Reflectance_Data()
+        >>> collection, stats = data_fetcher.get_optical_data(aoi, 2020, 2020, 'L8_SR')
+        >>> image_processor = final_Image()
+        >>> composite = image_processor.get_temporal_composite(collection, aoi, reducer='median')
+        >>> # With coverage calculation
+        >>> composite, coverage = image_processor.get_temporal_composite(
+        ...     collection, aoi, reducer='median', calculate_coverage=True
+        ... )
+        """
+        if isinstance(aoi, ee.FeatureCollection):
+            geometry = aoi.geometry()
+        else:
+            geometry = aoi
+        
+        # Get original band names before reduction (server-side ee.List)
+        original_bands = collection.first().bandNames()
+
+        # Resolve reducer argument to an Earth Engine reducer
+        if isinstance(reducer, str):
+            reducer_lower = reducer.lower()
+            if reducer_lower == 'median':
+                ee_reducer = ee.Reducer.median()
+            elif reducer_lower == 'mean':
+                ee_reducer = ee.Reducer.mean()
+            elif reducer_lower == 'min':
+                ee_reducer = ee.Reducer.min()
+            elif reducer_lower == 'max':
+                ee_reducer = ee.Reducer.max()
+            elif reducer_lower.startswith('percentile_'):
+                try:
+                    percentile = int(reducer_lower.split('_')[1])
+                except Exception:
+                    raise ValueError(f"Invalid percentile format: {reducer}")
+                ee_reducer = ee.Reducer.percentile([percentile])
+            else:
+                raise ValueError(f"Unsupported reducer: {reducer}")
+        else:
+            ee_reducer = reducer
+
+        # Check collection size - only if verbose to avoid unnecessary getInfo()
+        if verbose:
+            size = collection.size().getInfo()
+            if size == 0:
+                raise ValueError("Collection is empty, cannot create composite")
+            self.logger.info(f"Creating {reducer} composite from {size} images")
+
+        # Create composite
+        if add_band_stats:
+            # Compute main composite (using the requested reducer) and two additional stats: stdDev and count
+            main_comp = collection.reduce(ee_reducer).rename(original_bands)
+            std_comp = collection.reduce(ee.Reducer.stdDev()).rename(
+                original_bands.map(lambda b: ee.String(b).cat('_stdDev'))
+            )
+            count_comp = collection.reduce(ee.Reducer.count()).rename(
+                original_bands.map(lambda b: ee.String(b).cat('_count'))
+            )
+
+            # Combine bands in a predictable order: main bands, stdDev bands, count bands
+            composite = main_comp.addBands(std_comp).addBands(count_comp)
+        else:
+            # Single reducer composite - rename main bands back to original names
+            composite = collection.reduce(ee_reducer).rename(original_bands)
+        
+        # Clip to AOI (always required)
+        composite = composite.clip(geometry)
+        
+        if verbose:
+            self.logger.info("Composite clipped to AOI")
+        
+        # Add metadata - use server-side operations, avoid getInfo()
+        first_img = collection.first()
+        last_img = collection.sort('system:time_start', False).first()
+        
+        # Store dates as server-side strings to avoid getInfo() calls
+        start_date = ee.Date(first_img.get('system:time_start')).format('YYYY-MM-dd')
+        end_date = ee.Date(last_img.get('system:time_start')).format('YYYY-MM-dd')
+        size_server = collection.size()
+        
+        composite = composite.set({
+            'composite_start_date': start_date,
+            'composite_end_date': end_date,
+            'composite_count': size_server,
+            'composite_reducer': str(reducer)
+        })
+        
+        if verbose:
+            #Only call the client side info if needed
+            start_date_str = start_date.getInfo()
+            end_date_str = end_date.getInfo()
+            self.logger.info(f"Composite created from {start_date_str} to {end_date_str}")
+        
+        # Calculate data coverage if requested
+        if calculate_coverage:
+            coverage_stats = self.calculate_data_coverage(
+                composite, aoi, scale=coverage_scale, verbose=verbose
+            )
+            return composite, coverage_stats
+        else:
+            return composite
