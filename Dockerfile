@@ -14,21 +14,17 @@ RUN useradd -m -u 1000 user
 # Set working directory
 WORKDIR /home/user/app
 
-# Copy requirements and install Python dependencies
-COPY --chown=user:user requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 # Copy the entire application
 COPY --chown=user:user . .
 
-# Install the epistemx package in development mode
-RUN pip install -e .
+# Install the luma_ge package in development mode (this will install all dependencies from pyproject.toml)
+RUN pip install --no-cache-dir -e .
 
 # Get Google Service Account JSON secret and save it to auth directory at buildtime
 RUN --mount=type=secret,id=GOOGLE_SERVICE_ACCOUNT_JSON_B64,mode=0444,required=false \
     mkdir -p /home/user/app/auth && \
     if [ -f /run/secrets/GOOGLE_SERVICE_ACCOUNT_JSON_B64 ]; then \
-        base64 -d /run/secrets/GOOGLE_SERVICE_ACCOUNT_JSON_B64 > /home/user/app/auth/service-account.json; \
+    base64 -d /run/secrets/GOOGLE_SERVICE_ACCOUNT_JSON_B64 > /home/user/app/auth/service-account.json; \
     fi && \
     chown -R user:user /home/user/app/auth
 
@@ -46,17 +42,8 @@ ENV PATH=/home/user/.local/bin:$PATH
 ENV TMPDIR=/home/user/tmp
 ENV TEMP=/home/user/tmp
 
-# Expose the port that Streamlit runs on
-EXPOSE 7860
+# Expose the port for Jupyter Lab
+EXPOSE 8888
 
-# Set environment variables for Streamlit
-ENV STREAMLIT_SERVER_PORT=7860
-ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
-ENV STREAMLIT_SERVER_HEADLESS=true
-ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
-
-# Health check
-HEALTHCHECK CMD curl --fail http://localhost:7860/_stcore/health
-
-# Command to run the application
-CMD ["streamlit", "run", "home.py", "--server.port", "7860", "--server.address", "0.0.0.0", "--server.enableXsrfProtection", "false"]
+# Command to run Jupyter Lab
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''", "--NotebookApp.password=''"]

@@ -1,13 +1,11 @@
-# LUMA Back-end Development
+# Luma Geospatial Engine
 
-This repository contains the core backend algorithms and modules for the Epistem land use land cover mapping platform.
+A Python package that serves as the geospatial engine for the Epistem Land Use Mapping for All (Luma) platform.
 
 ## File Structure
 
-- **`src/epistemx/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
+- **`src/luma_ge/`**: The core Python package for this project. It contains all the backend logic, helper functions, and modules for interacting with Google Earth Engine.
 - **`notebooks/`**: Jupyter notebooks used for development, experimentation, and demonstrating the functionality of the core modules.
-- **`home.py` & `pages/`**: A minimal Streamlit application for testing and demonstrating the backend algorithms.
-- **`environment.yml`**: The environment file for creating a reproducible environment. It lists all necessary Python packages and dependencies.
 - **`pyproject.toml`**: The standard Python project configuration file. It defines project metadata and core dependencies for `pip`.
 
 ## Getting Started
@@ -28,107 +26,80 @@ git --version
 conda --version
 ```
 
-**Warning for Windows Users: Do not add Python or Conda to your system PATH.** This causes conflicts and prevents the epistemx environment from working correctly. For details, see [FAQ- Should I add Anaconda to the Windows PATH?](https://www.anaconda.com/docs/getting-started/working-with-conda/reference/faq#should-i-add-anaconda-to-the-windows-path).
+**Warning for Windows Users: Do not add Python or Conda to your system PATH.** This causes conflicts and prevents the luma_ge environment from working correctly. For details, see [FAQ- Should I add Anaconda to the Windows PATH?](https://www.anaconda.com/docs/getting-started/working-with-conda/reference/faq#should-i-add-anaconda-to-the-windows-path).
 
 ### 2. Set Up the Python Environment
 
 Choose one of the following setup methods based on your needs:
 
-#### Option A: Prepackaged Conda-Pack Environment (Windows 11 x64)
+#### Option A: Install from Git
 
-_Best for Windows 11 x64 machines - fastest setup with all dependencies pre-installed._
+_Recommended for most users - install directly from the repository._
 
-1. Download the prepackaged `epistemx` conda-pack archive from [SharePoint](https://icrafcifor.sharepoint.com/:u:/r/sites/EPISTEM/Shared%20Documents/EPISTEM%20Consortium/1%20Monitoring%20Technology/Prototyping/python_environment/epistemx.tar.gz?csf=1&web=1&e=eGbscP). You will need access to the EPISTEM SharePoint workspace.
+**Direct install (no cloning required):**
 
-2. Unpack the archive and make it usable on your machine by following [these instructions](https://gist.github.com/pmbaumgartner/2626ce24adb7f4030c0075d2b35dda32) for restoring a conda-pack environment. In short, place the archive in the directory where you keep your Conda environments and extract it. Example commands (adapt paths to your platform):
+```bash
+pip install git+https://github.com/epistem-io/EpistemXBackend.git
+```
 
-   ```powershell
-   mkdir -p ~/epistemx
-   tar -xzf epistemx.tar.gz -C ~/epistemx
-   ```
+**Or clone and install in editable mode:**
 
-3. Then, activate the environment and unpack it:
-
-   ```powershell
-   cd \path\to\epistemx
-   .\Scripts\activate.bat
-   .\Scripts\conda-unpack.exe
-   ```
-
-   The epistemx environment now includes all dependencies for Earth Engine, JupyterLab, and Streamlit.
-
-4. Clone the repository and proceed to [Usage](#4-usage).
-
-#### Option B: Build from `environment.yml` (macOS/Linux)
-
-_Recommended for macOS and Linux systems, or if you prefer building the environment yourself._
-
-1. Clone the repository first:
+1. Clone the repository:
 
    ```bash
    git clone https://github.com/epistem-io/EpistemXBackend.git
    cd EpistemXBackend
    ```
 
-2. Create the environment using the provided `environment.yml`:
+2. Install the package using pip:
 
    ```bash
-   conda env create -f environment.yml -n epistemx
-   conda activate epistemx
+   pip install -e .
    ```
 
-3. Proceed to [Usage](#4-usage).
+   This will install `luma_ge` and all its dependencies as specified in `pyproject.toml`.
+
+3. Usage:
+
+   Launch Jupyter Lab to work with the notebooks:
+
+   ```bash
+   jupyter lab
+   ```
+
+   Then open `notebooks/Module_implementation.ipynb` for a step-by-step guide on using the `luma_ge` modules.
+
+#### Option B: Docker Container
+
+_Best for deployment or isolated environments._
+
+1. Build the Docker image:
+
+   ```bash
+   docker build -t luma_ge .
+   ```
+
+2. Run the container:
+
+   ```bash
+   docker run -p 8888:8888 luma_ge
+   ```
+
+3. Access Jupyter Lab at `http://localhost:8888` and open `notebooks/Module_implementation.ipynb` to start working with the modules.
 
 #### Option C: GitHub Codespaces (Cloud-based, No Local Setup)
 
-_Best for quick experimentation without local installation, or when working on different machines. Note: This option supports running the epistemx package and notebooks only; Streamlit applications are not supported in Codespaces._
+_Best for quick experimentation without local installation, or when working on different machines._
 
 1. **Create a Codespace** from the repository:
-   - Navigate to the [EpistemXBackend repository](https://github.com/epistem-io/EpistemXBackend) on GitHub
+
+   - Navigate to the [luma-stack repository](https://github.com/epistem-io/luma-stack) on GitHub
    - Click the green **Code** button
    - Select **Codespaces** tab → **Create codespace on update_main**
    - Wait for the environment to initialize (typically 2-3 minutes)
 
-2. **Start working with notebooks**:
-   - Open the `notebooks/Module_implementation.ipynb` file in VS Code's notebook editor within the Codespace
-   - When prompted, select the Python kernel provided by the Codespace environment
-   - The required environment and package setup are already configured in Codespaces
-   - Work through the notebook for step-by-step examples and module testing
+2. **Start Working**:
 
-**Codespaces Tips:**
-
-- Notebooks run directly in VS Code's built-in notebook editor
-- Long-running Earth Engine operations may take several minutes; monitor progress in cell outputs
-- Download results locally by right-clicking files in the file explorer → **Download**
-- Use the VS Code terminal (Ctrl+\`) for additional commands if needed
-- Codespaces automatically save your work; you can return to the same Codespace later
-
-
-
-### 4. Usage
-
-#### Running the Jupyter Notebooks
-
-Before launching, install the `epistemx` package into the active environment so notebooks can import the source modules:
-
-```bash
-python -m pip install -e .
-```
-
-Launch Jupyter Lab from the project root to explore the project's modules and workflows:
-
-```bash
-jupyter lab
-```
-
-Start with `Module_implementation.ipynb` in the `notebooks/` directory for a focused guide on individual module testing and development. This notebook provides step-by-step examples for working with the core epistemx modules.
-
-#### Running the Streamlit Application
-
-The included Streamlit app is a minimal implementation for testing the backend. To launch it, run the following command from the project's root directory:
-
-```bash
-python -m streamlit run home.py
-```
-
-This will open the application in your default web browser.
+   - Open the `notebooks/Module_implementation.ipynb` file in VS Code's notebook editor within the Codespace.
+   - Choose the pre-configured Python environment (dependencies are already installed).
+   - Execute the cells to observe how individual modules function with their default settings and example inputs from the `/data` directory.
