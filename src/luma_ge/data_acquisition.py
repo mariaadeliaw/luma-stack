@@ -150,55 +150,58 @@ class Reflectance_Data:
         return thermal_data in self.THERMAL_DATASETS
     #Function to mask clouds, shadow, and cirrus. Using QA Bands
     def mask_landsat_sr(self, image,cloud_conf_thresh=2, shadow_conf_thresh=2, cirrus_conf_thresh=2):
-            """
-            Mask clouds, shadows and cirrus for Landsat Collection 2 SR using QA_PIXEL band.
+        """
+        Mask clouds, shadows and cirrus for Landsat Collection 2 SR using QA_PIXEL band.
                 
-            Parameters:
-            -----------
-            image : ee.Image: Landsat SR image
-            cloud_conf_thresh : int. Cloud confidence threshold (0=None, 1=Low, 2=Med, 3=High)
-            shadow_conf_thresh : int. Shadow confidence threshold (0=None, 1=Low, 2=Med, 3=High)
-            cirrus_conf_thresh : int. Cirrus confidence threshold (0=None, 1=Low, 2=Med, 3=High)
+        Parameters:
+        -----------
+        image : ee.Image: Landsat SR image
+        cloud_conf_thresh : int. Cloud confidence threshold (0=None, 1=Low, 2=Med, 3=High)
+        shadow_conf_thresh : int. Shadow confidence threshold (0=None, 1=Low, 2=Med, 3=High)
+        cirrus_conf_thresh : int. Cirrus confidence threshold (0=None, 1=Low, 2=Med, 3=High)
 
-            Returns:
-            --------
-            ee.Image : Masked image (ee.)
+        Returns:
+        --------
+        ee.Image : Masked image (ee.)
 
-            References
-            --------
-            https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands 
+        References
+        --------
+        https://www.usgs.gov/landsat-missions/landsat-collection-2-quality-assessment-bands 
 
-            Example
-            --------
-            >>> get_landsat = Reflectance_Data()
-            #Implementation on image collection
-            >>> collection = (collection.map(lambda img: get_landsat.mask_landsat_sr(img))
-            #Implementatio on Image
-            >>> masked_image = get_landsat.mask_landsat_sr(image)
-            """
-            qa = image.select('QA_PIXEL')
-            #Deterministic bits ---
-            cloud_bit = 1 << 3
-            shadow_bit = 1 << 4
-            cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0)
-            shadow_mask = qa.bitwiseAnd(shadow_bit).eq(0)
-            #Confidence bits ---
-            cloud_conf = qa.rightShift(8).bitwiseAnd(3)     # Bits 8–9
-            shadow_conf = qa.rightShift(10).bitwiseAnd(3)   # Bits 10–11
-            #snow_conf = qa.rightShift(12).bitwiseAnd(3)     # Bits 12–13
-            cirrus_conf = qa.rightShift(14).bitwiseAnd(3)   # Bits 14–15
-            #Keep pixels below thresholds
-            conf_mask = (cloud_conf.lt(cloud_conf_thresh)
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        #Implementation on image collection
+        >>> collection = (collection.map(lambda img: get_landsat.mask_landsat_sr(img))
+        #Implementatio on Image
+        >>> masked_image = get_landsat.mask_landsat_sr(image)
+        """
+        qa = image.select('QA_PIXEL')
+        #Deterministic bits
+        #fyi, (bit 3 is set to 1) and so on
+        cloud_bit = 1 << 3
+        shadow_bit = 1 << 4
+        cirrus_bit = 1 << 2
+        #bitwise operations to get the masks
+        cloud_mask = qa.bitwiseAnd(cloud_bit).eq(0)
+        shadow_mask = qa.bitwiseAnd(shadow_bit).eq(0)
+        cirrus_mask = qa.bitwiseAnd(cirrus_bit).eq(0)
+        #Confidence bits ---
+        cloud_conf = qa.rightShift(8).bitwiseAnd(3)     # Bits 8–9
+        shadow_conf = qa.rightShift(10).bitwiseAnd(3)   # Bits 10–11
+        cirrus_conf = qa.rightShift(14).bitwiseAnd(3)   # Bits 14–15
+        #Keep pixels below thresholds
+        conf_mask = (cloud_conf.lt(cloud_conf_thresh)
                         .And(shadow_conf.lt(shadow_conf_thresh))
-                        #.And(snow_conf.lt(snow_conf_thresh))
                         .And(cirrus_conf.lt(cirrus_conf_thresh)))
-            #Final mask
-            final_mask = cloud_mask.And(shadow_mask).And(conf_mask)
-            return image.updateMask(final_mask).copyProperties(image, image.propertyNames())
+        #Final mask
+        final_mask = cloud_mask.And(shadow_mask).And(cirrus_mask).And(conf_mask)
+        return image.updateMask(final_mask).copyProperties(image, image.propertyNames())
     #Functions to rename Landsat bands 
     def rename_landsat_bands(self, image, sensor_type):
         """
         Standardize Landsat Surface Reflectance (SR) band names based on sensor type. From 'SR_B*' or 'B*' to 'NIR', 'GREEN', etc.
+        Used in get multispectral data function
 
         Parameters
         ----------
@@ -210,8 +213,10 @@ class Reflectance_Data:
         ee.Image : Image with standardized band names
 
         Example
-        --------
-
+        -------
+        >>> rd = Reflectance_Data()
+        >>> img8 = ee.Image('LANDSAT/LC08/C02/T1_L2/LC08_044034_20200716')
+        >>> renamed8 = rd.rename_landsat_bands(img8, 'L8')
         """
         if sensor_type in ['L4','L5', 'L7']:
             # Landsat 5/7 SR bands
@@ -246,7 +251,19 @@ class Reflectance_Data:
         Returns
         -------
         ee.Image : Image with floating point, corresponding to surface reflectance value
-        """        
+        
+        References
+        -------
+        https://www.usgs.gov/faqs/how-do-i-use-a-scale-factor-landsat-level-2-science-products
+        
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        #Implementation on image collection
+        >>> collection = (collection.map(lambda img: get_landsat.apply_scale_factors(img))
+        #Implementatio on Image
+        >>> masked_image = get_landsat.apply_scale_factors(image)
+        """           
         optical_bands = image.select('SR_B.').multiply(0.0000275).add(-0.2)
         #thermal_bands = image.select('ST_B.*').multiply(0.00341802).add(149.0)
         return image.addBands(optical_bands, None, True)
