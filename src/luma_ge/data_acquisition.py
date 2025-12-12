@@ -73,9 +73,9 @@ class Reflectance_Data:
             'description': 'Landsat 9 Operational Land Imager-2 Surface Reflectance'
         }
     }
-#Define the thermal datasets. The thermal bands used is from Collection 2 Top-of-atmosphere data 
-#The TOA data provide consistent result and contain minimum missing pixel data
-#Note: Landsat 1-3 MSS sensors did not have thermal bands, so they are not included
+    #Define the thermal datasets. The thermal bands used is from Collection 2 Top-of-atmosphere data 
+    #The TOA data provide consistent result and contain minimum missing pixel data
+    #Note: Landsat 1-3 MSS sensors did not have thermal bands, so they are not included
     THERMAL_DATASETS = {
         'L4_TOA': {
             'collection': 'LANDSAT/LT04/C02/T1_TOA',
@@ -423,7 +423,7 @@ class Reflectance_Data:
         >>> # With AOI cloud filtering
         >>> collection, stats = get_landsat.get_thermal_data(aoi, 2020, 2023, 'L8_TOA', cloud_cover=30)
         """
-        #Helper function to parse the date so that the user can only input the year
+        #Helper function to parse the date so that the user only input year 
         def parse_year_or_date(date_input, is_start=True):
             if isinstance(date_input, int):  # User gave integer year like 2024
                 return f"{date_input}-01-01" if is_start else f"{date_input}-12-31"
@@ -457,7 +457,6 @@ class Reflectance_Data:
                 raise ValueError(f"thermal_data must be one of: {list(self.THERMAL_DATASETS.keys())}")
 
         config = self.THERMAL_DATASETS[thermal_data]
-
         #Decide which thermal band to select
         sensor = config['sensor']
         if sensor in ['L4', 'L5']:
@@ -487,10 +486,8 @@ class Reflectance_Data:
             self.logger.info(f"Date range of available images: {initial_stats['date_range']}")
         #Apply cloud cover filter
         collection = initial_collection.filter(ee.Filter.lt(config['cloud_property'], cloud_cover))
-        
         #Limit to 250 scenes to avoid Earth Engine computation limits
         collection = collection.limit(250)
-        
         filtered_stats = stats.get_collection_statistics(collection, compute_detailed_stats)
         if verbose and compute_detailed_stats:
             if filtered_stats.get('total_images', 0) > 0:
@@ -736,12 +733,12 @@ class final_Image:
         
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(log_level)
-        self.logger.info("final_Image initialized.")
+        self.logger.info("final_Image creation initialized.")
     #Function to calculate data coverage (pixel validity) within AOI
     def calculate_data_coverage(self, composite_image, aoi, scale=30, max_pixels=1e9, verbose=True):
         """
-        Calculate data coverage (valid pixels) percentage within AOI for a composite image.
-        This shows how much of your AOI has valid data after compositing.
+        Calculate data coverage (valid pixels) percentage within AOI for temporal aggregation composite image.
+        This shows how much an AOI has valid data after compositing.
         
         Parameters
         ----------
@@ -941,8 +938,7 @@ class final_Image:
     #Temporal composite computes statistics across pixels
     #logic behind cloud 'removal' is that cloud typically have higher pixel value due to high reflectance,
     #thus when median composite is used cloud get 'remove' from the final image
-    def get_temporal_composite(self, collection, aoi, reducer='median', 
-                              add_band_stats=False, calculate_coverage=False, 
+    def get_temporal_composite(self, collection, aoi, reducer='median',calculate_coverage=False, 
                               coverage_scale=30, verbose=True):
         """
         Create a temporal composite from image collection using specified reducer.
@@ -978,15 +974,14 @@ class final_Image:
         ...     collection, aoi, reducer='median', calculate_coverage=True
         ... )
         """
+        #Make sure that AOi is feature collection
         if isinstance(aoi, ee.FeatureCollection):
             geometry = aoi.geometry()
         else:
             geometry = aoi
-        
-        # Get original band names before reduction (server-side ee.List)
+        #Get original band names before reduction (for renaming)
         original_bands = collection.first().bandNames()
-
-        # Resolve reducer argument to an Earth Engine reducer
+        #Resolve reducer argument to an Earth Engine reducer
         if isinstance(reducer, str):
             reducer_lower = reducer.lower()
             if reducer_lower == 'median':
@@ -1008,29 +1003,15 @@ class final_Image:
         else:
             ee_reducer = reducer
 
-        # Check collection size - only if verbose to avoid unnecessary getInfo()
+        #Check collection size - only if verbose to avoid unnecessary getInfo()
         if verbose:
             size = collection.size().getInfo()
             if size == 0:
                 raise ValueError("Collection is empty, cannot create composite")
             self.logger.info(f"Creating {reducer} composite from {size} images")
 
-        # Create composite
-        if add_band_stats:
-            # Compute main composite (using the requested reducer) and two additional stats: stdDev and count
-            main_comp = collection.reduce(ee_reducer).rename(original_bands)
-            std_comp = collection.reduce(ee.Reducer.stdDev()).rename(
-                original_bands.map(lambda b: ee.String(b).cat('_stdDev'))
-            )
-            count_comp = collection.reduce(ee.Reducer.count()).rename(
-                original_bands.map(lambda b: ee.String(b).cat('_count'))
-            )
-
-            # Combine bands in a predictable order: main bands, stdDev bands, count bands
-            composite = main_comp.addBands(std_comp).addBands(count_comp)
-        else:
-            # Single reducer composite - rename main bands back to original names
-            composite = collection.reduce(ee_reducer).rename(original_bands)
+        #Single reducer composite - rename main bands back to original names
+        composite = collection.reduce(ee_reducer).rename(original_bands)
         
         # Clip to AOI (always required)
         composite = composite.clip(geometry)
@@ -1038,7 +1019,7 @@ class final_Image:
         if verbose:
             self.logger.info("Composite clipped to AOI")
         
-        # Add metadata - use server-side operations, avoid getInfo()
+        # Add metadata 
         first_img = collection.first()
         last_img = collection.sort('system:time_start', False).first()
         
