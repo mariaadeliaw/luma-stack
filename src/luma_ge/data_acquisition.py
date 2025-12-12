@@ -272,7 +272,7 @@ class Reflectance_Data:
                         cloud_cover=30,
                         verbose=True, compute_detailed_stats=True):
         """
-        Get optical image collection for Landsat 1-9 SR data with detailed information logging.
+        Get multispectral image collection for Landsat 1-9 with detailed information logging.
 
         Parameters
         ----------
@@ -290,6 +290,17 @@ class Reflectance_Data:
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_multispectral_data(aoi, 2020, 2023, 'L8_SR', cloud_cover=30)
         """
         #Helper function so that the user only input year or specific date range
         def parse_year_or_date(date_input, is_start=True):
@@ -323,23 +334,6 @@ class Reflectance_Data:
         initial_collection = (ee.ImageCollection(config['collection'])
                             .filterBounds(aoi)
                             .filterDate(start_date, end_date))
-        #Compute cloud within the area of interest (produce additional processing time)
-        '''
-        def add_aoi_cloud(img):
-            qa = img.select('QA_PIXEL')
-            cloud_mask = qa.bitwiseAnd(1 << 3).Or(qa.bitwiseAnd(1<<4))
-            total = ee.Number(cloud_mask.reduceRegion(
-                reducer=ee.Reducer.count(), geometry=aoi, scale=30, maxPixels=1e9
-            ).values().get(0))
-            cloudy = ee.Number(cloud_mask.reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=aoi, scale=30, maxPixels=1e9
-            ).values().get(0))
-            cloud_perc = cloudy.divide(total).multiply(100)
-            return img.set({'CLOUDY_PERC_AOI': cloud_perc})
-        
-        #Apply the AOI cloud percentage to the image collection
-        initial_collection = initial_collection.map(add_aoi_cloud)
-        '''
         #initial_stats = self.get_collection_statistics(initial_collection, compute_detailed_stats)
         stats_object = Reflectance_Stats()
         initial_stats = stats_object.get_collection_statistics(initial_collection, compute_detailed_stats)
@@ -349,6 +343,8 @@ class Reflectance_Data:
 
         #Collection after cloud cover filter
         collection = initial_collection.filter(ee.Filter.lt(config['cloud_property'], cloud_cover))
+        #Limit to 250 scenes to avoid Earth Engine computation limits
+        collection = collection.limit(250)
         filtered_stats = stats_object.get_collection_statistics(collection, compute_detailed_stats)
         #Computing image statistics
         if verbose and compute_detailed_stats:
@@ -416,6 +412,16 @@ class Reflectance_Data:
         -------
         tuple : (ee.ImageCollection, dict)
             Filtered and preprocessed image collection with statistics.
+        References
+        -------
+        https://developers.google.com/earth-engine/datasets/catalog/landsat
+
+        Example
+        --------
+        >>> get_landsat = Reflectance_Data()
+        >>> collection, stats = get_landsat.get_thermal_data(aoi, 2020, 2023, 'L8_TOA', 30, True, True)
+        >>> # With AOI cloud filtering
+        >>> collection, stats = get_landsat.get_thermal_data(aoi, 2020, 2023, 'L8_TOA', cloud_cover=30)
         """
         #Helper function to parse the date so that the user can only input the year
         def parse_year_or_date(date_input, is_start=True):
@@ -481,6 +487,10 @@ class Reflectance_Data:
             self.logger.info(f"Date range of available images: {initial_stats['date_range']}")
         #Apply cloud cover filter
         collection = initial_collection.filter(ee.Filter.lt(config['cloud_property'], cloud_cover))
+        
+        #Limit to 250 scenes to avoid Earth Engine computation limits
+        collection = collection.limit(250)
+        
         filtered_stats = stats.get_collection_statistics(collection, compute_detailed_stats)
         if verbose and compute_detailed_stats:
             if filtered_stats.get('total_images', 0) > 0:
@@ -526,7 +536,41 @@ class Reflectance_Stats:
         self.logger.info("Reflectance Stats initialized.")
     def get_collection_statistics(self, collection, compute_stats=True, print_report=False):
         """
-        Get comprehensive statistics about an image collection.
+        Get comprehensive statistics about an Earth Engine image collection retrival.
+
+        Parameters
+        ----------
+        collection : ee.ImageCollection
+            The Earth Engine ImageCollection (from get multispectral function).
+        compute_stats : bool, optional
+            If True (default) the function will call ``getInfo()`` to compute
+            detailed statistics (counts, cloud cover numbers, dates, WRS tiles).
+            If False the function returns a minimal, server-side friendly
+            summary object and avoids client-side network calls.
+        print_report : bool, optional
+            If True the function will print formatted report of collection retrival
+            (default: False).
+
+        Returns
+        -------
+        dict
+            A dictionary containing either detailed statistics (when
+            ``compute_stats=True``) or a lightweight summary with the server
+            side objects (when ``compute_stats=False``). Typical keys when
+            detailed stats are returned:
+            - 'total_images'
+            - 'date_range'
+            - 'cloud_cover' (dict with min/max/mean/values)
+            - 'aoi_cloud_cover' (dict with min/max/mean/values, if available)
+            - 'path_row_tiles'
+            - 'unique_tiles'
+            - 'individual_dates'
+            - 'Scene_ids'
+
+        Example
+        -------
+        >>> stats = Reflectance_Stats().get_collection_statistics(collection, compute_stats=True)
+        >>> print(stats['total_images'], stats['date_range'])
         """
         #Get the number of image used 
         try:
@@ -681,7 +725,7 @@ class Reflectance_Stats:
 class final_Image:
     """
     Class for combining image collections to get the final images.
-    Supports single-date mosaics and time series compositing.
+    Supports quality mosaics (direct stack) and temporal aggregation.
     """
     
     def __init__(self, log_level=logging.INFO):
@@ -799,7 +843,6 @@ class final_Image:
             Band to use for quality assessment. Options:
             - 'NDVI': Normalized Difference Vegetation Index (Select pixels with high NDVI value)
             - 'NIR': Near-infrared band (general purpose, select pixel with highest NIR reflectance)
-            - 'BLUE': Blue band (inverted - selects clearest pixels, since lower blue value correspond to haze)
         calculate_coverage : bool
             If True, calculate data coverage within AOI (default: False)
             Note: This triggers a client-side computation and may be slow for large areas
@@ -847,10 +890,6 @@ class final_Image:
             elif quality_band == 'NIR':
                 #If NIR band is selected (higher, better)
                 return img.addBands(img.select('NIR').rename('quality'))
-            elif quality_band == 'BLUE':
-                #Invert BLUE band (lower blue = clearer, so negate it)
-                inverted_blue = img.select('BLUE').multiply(-1).rename('quality')
-                return img.addBands(inverted_blue)
             else:
                 # Use specified band directly
                 return img.addBands(img.select(quality_band).rename('quality'))
@@ -868,7 +907,7 @@ class final_Image:
         if verbose:
             self.logger.info(f"Quality mosaic created covering AOI with best available pixels")
         
-        # Add metadata
+        #Add metadata
         first_img = collection.first()
         last_img = collection.sort('system:time_start', False).first()
         
@@ -911,20 +950,13 @@ class final_Image:
         
         Parameters
         ----------
-        collection : ee.ImageCollection
-            Filtered image collection from Reflectance_Data
-        aoi : ee.Geometry or ee.FeatureCollection
-            Area of interest for clipping
-        reducer : str or ee.Reducer
-            Reduction method: 'median', 'mean', 'min', 'max', 'percentile_'
-            (default: 'median')
-        add_band_stats : bool
-            If True, add additional bands with stdDev and count (default: False)
-        calculate_coverage : bool
-            If True, calculate data coverage within AOI (default: False)
+        collection : ee.ImageCollection. Filtered image collection from Reflectance_Data
+        aoi :  ee.FeatureCollection. Area of interest for clipping
+        reducer : str or ee.Reducer. Reduction method: 'median', 'mean', 'min', 'max', 'percentile_'
+        add_band_stats : bool, If True, add additional bands with stdDev and count (default: False)
+        calculate_coverage : bool. If True, calculate data coverage within AOI (default: False)
             Note: This triggers a client-side computation and may be slow for large areas
-        coverage_scale : int
-            Pixel scale in meters for coverage calculation (default: 30m)
+        coverage_scale : int. Pixel scale in meters for coverage calculation (default: 30m)
             Use larger values (90m+) for faster computation on large areas
         verbose : bool
             If True, log detailed information (default: True)
